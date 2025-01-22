@@ -2,71 +2,24 @@
   <view class="community-container">
     <!-- 顶部搜索栏 -->
     <view class="search-bar">
-      <input type="text" placeholder="搜索案例或问答" v-model="searchText" />
+      <input type="text" placeholder="搜索感兴趣的法律话题" v-model="searchText" />
     </view>
 
-    <!-- 分类标签页 -->
-    <view class="tab-header">
+    <!-- 话题分类标签 -->
+    <scroll-view scroll-x class="topic-tags">
       <view 
-        class="tab-item" 
-        :class="{ active: currentTab === 'cases' }"
-        @click="switchTab('cases')"
-      >案例分享</view>
-      <view 
-        class="tab-item" 
-        :class="{ active: currentTab === 'qa' }"
-        @click="switchTab('qa')"
-      >法律问答</view>
-    </view>
-
-    <!-- 案例分享列表 -->
-    <scroll-view 
-      v-if="currentTab === 'cases'" 
-      scroll-y 
-      class="content-list"
-      @scrolltolower="loadMore"
-      refresher-enabled
-      :refresher-triggered="isRefreshing"
-      @refresherrefresh="onRefresh"
-    >
-      <view class="case-item" v-for="item in caseList" :key="item.id" @click="navigateToDetail('case', item.id)">
-        <view class="case-header">
-          <image class="user-avatar" :src="item.userAvatar" mode="aspectFill"></image>
-          <text class="username">{{item.username}}</text>
-          <text class="time">{{item.time}}</text>
-        </view>
-        <view class="case-content">
-          <view class="case-title">{{item.title}}</view>
-          <view class="case-desc">{{item.description}}</view>
-          <view class="case-images" v-if="item.images && item.images.length">
-            <image 
-              v-for="(img, index) in item.images" 
-              :key="index" 
-              :src="img" 
-              mode="aspectFill"
-            ></image>
-          </view>
-        </view>
-        <view class="case-footer">
-          <view class="action-item">
-            <text class="iconfont icon-like"></text>
-            <text>{{item.likes}}</text>
-          </view>
-          <view class="action-item">
-            <text class="iconfont icon-comment"></text>
-            <text>{{item.comments}}</text>
-          </view>
-          <view class="action-item">
-            <text class="iconfont icon-share"></text>
-            <text>分享</text>
-          </view>
-        </view>
+        class="tag-item" 
+        :class="{ active: currentTag === tag.id }"
+        v-for="tag in tags" 
+        :key="tag.id"
+        @click="switchTag(tag.id)"
+      >
+        {{tag.name}}
       </view>
     </scroll-view>
 
-    <!-- 法律问答列表 -->
+    <!-- 瀑布流内容区 -->
     <scroll-view 
-      v-if="currentTab === 'qa'" 
       scroll-y 
       class="content-list"
       @scrolltolower="loadMore"
@@ -74,44 +27,106 @@
       :refresher-triggered="isRefreshing"
       @refresherrefresh="onRefresh"
     >
-      <view class="qa-item" v-for="item in qaList" :key="item.id" @click="navigateToDetail('qa', item.id)">
-        <view class="qa-header">
-          <text class="qa-tag" :class="item.status">{{item.statusText}}</text>
-          <text class="qa-title">{{item.title}}</text>
-        </view>
-        <view class="qa-content">{{item.content}}</view>
-        <view class="qa-footer">
-          <view class="qa-info">
-            <text class="username">{{item.username}}</text>
-            <text class="time">{{item.time}}</text>
+      <view class="waterfall">
+        <view class="waterfall-left">
+          <view 
+            class="post-item" 
+            v-for="item in leftList" 
+            :key="item.id"
+            @click="navigateToDetail(item.id)"
+          >
+            <image 
+              class="post-image" 
+              :src="item.cover" 
+              mode="widthFix"
+              v-if="item.type === 'image'"
+            ></image>
+            <view class="video-container" v-if="item.type === 'video'">
+              <video 
+                :src="item.video"
+                :poster="item.cover"
+                class="post-video"
+              ></video>
+              <view class="video-duration">{{item.duration}}</view>
+            </view>
+            <view class="post-content">
+              <text class="post-title">{{item.title}}</text>
+              <view class="post-footer">
+                <view class="user-info">
+                  <image class="user-avatar" :src="item.userAvatar"></image>
+                  <text class="username">{{item.username}}</text>
+                </view>
+                <view class="post-stats">
+                  <text class="stats-item">
+                    <uni-icons 
+                      :type="item.isLiked ? 'heart-filled' : 'heart'" 
+                      size="16" 
+                      :color="item.isLiked ? '#007AFF' : '#666'"
+                    ></uni-icons>
+                    <text>{{item.likes}}</text>
+                  </text>
+                  <text class="stats-item">
+                    <uni-icons type="chatbubble" size="16" color="#666"></uni-icons>
+                    <text>{{item.comments}}</text>
+                  </text>
+                </view>
+              </view>
+            </view>
           </view>
-          <view class="qa-stats">
-            <text>{{item.answers}}回答</text>
+        </view>
+        <view class="waterfall-right">
+          <view 
+            class="post-item" 
+            v-for="item in rightList" 
+            :key="item.id"
+            @click="navigateToDetail(item.id)"
+          >
+            <image 
+              class="post-image" 
+              :src="item.cover" 
+              mode="widthFix"
+              v-if="item.type === 'image'"
+            ></image>
+            <view class="video-container" v-if="item.type === 'video'">
+              <video 
+                :src="item.video"
+                :poster="item.cover"
+                class="post-video"
+              ></video>
+              <view class="video-duration">{{item.duration}}</view>
+            </view>
+            <view class="post-content">
+              <text class="post-title">{{item.title}}</text>
+              <view class="post-footer">
+                <view class="user-info">
+                  <image class="user-avatar" :src="item.userAvatar"></image>
+                  <text class="username">{{item.username}}</text>
+                </view>
+                <view class="post-stats">
+                  <text class="stats-item">
+                    <uni-icons 
+                      :type="item.isLiked ? 'heart-filled' : 'heart'" 
+                      size="16" 
+                      :color="item.isLiked ? '#007AFF' : '#666'"
+                    ></uni-icons>
+                    <text>{{item.likes}}</text>
+                  </text>
+                  <text class="stats-item">
+                    <uni-icons type="chatbubble" size="16" color="#666"></uni-icons>
+                    <text>{{item.comments}}</text>
+                  </text>
+                </view>
+              </view>
+            </view>
           </view>
         </view>
       </view>
     </scroll-view>
 
     <!-- 悬浮发布按钮 -->
-    <view class="float-btn" @click="showPublishModal">
+    <view class="float-btn" @click="navigateToPublish">
       <text class="iconfont icon-add"></text>
     </view>
-
-    <!-- 发布选择弹窗 -->
-    <uni-popup ref="popup" type="bottom">
-      <view class="popup-content">
-        <view class="popup-title">发布内容</view>
-        <view class="popup-item" @click="navigateToPublish('case')">
-          <text class="iconfont icon-case"></text>
-          <text>发布案例</text>
-        </view>
-        <view class="popup-item" @click="navigateToPublish('qa')">
-          <text class="iconfont icon-question"></text>
-          <text>发布问题</text>
-        </view>
-        <view class="popup-cancel" @click="hidePublishModal">取消</view>
-      </view>
-    </uni-popup>
   </view>
 </template>
 
@@ -120,66 +135,72 @@ export default {
   data() {
     return {
       searchText: '',
-      currentTab: 'cases',
+      currentTag: 'all',
       isRefreshing: false,
-      caseList: [
-        {
-          id: 1,
-          userAvatar: '/static/default-avatar.png',
-          username: '法律专家',
-          time: '2小时前',
-          title: '小张在看与书信',
-          description: '与书信和丁禹锡组cp',
-          images: ['/static/case1.jpg', '/static/case2.jpg'],
-          likes: 128,
-          comments: 32
-        },
-        // 更多案例数据...
+      tags: [
+        { id: 'all', name: '全部' },
+        { id: 'civil', name: '民事法律' },
+        { id: 'criminal', name: '刑事法律' },
+        { id: 'business', name: '商业法律' },
+        { id: 'labor', name: '劳动法律' },
+        { id: 'property', name: '房产法律' }
       ],
-      qaList: [
+      leftList: [
         {
           id: 1,
-          status: 'unsolved',
-          statusText: '待解答',
-          title: '关于abcd我好饿了的咨询',
-          content: '一会儿去宜家吃热狗？',
-          username: '用户123',
-          time: '1小时前',
-          answers: 5
+          type: 'image',
+          cover: '/static/post1.jpg',
+          title: '租房合同纠纷怎么解决？分享一个真实案例',
+          userAvatar: '/static/avatar1.jpg',
+          username: '法律顾问小王',
+          likes: 1234
         },
-        // 更多问答数据...
+        {
+          id: 2,
+          type: 'video',
+          video: '/static/video1.mp4',
+          cover: '/static/cover1.jpg',
+          duration: '2:30',
+          title: '一分钟了解劳动合同签订注意事项',
+          userAvatar: '/static/avatar2.jpg',
+          username: '法律小课堂',
+          likes: 2345
+        }
+      ],
+      rightList: [
+        {
+          id: 3,
+          type: 'image',
+          cover: '/static/post2.jpg',
+          title: '遇到交通事故如何正确处理？',
+          userAvatar: '/static/avatar3.jpg',
+          username: '资深律师张三',
+          likes: 3456
+        }
       ]
     }
   },
   methods: {
-    switchTab(tab) {
-      this.currentTab = tab
+    switchTag(tagId) {
+      this.currentTag = tagId
+      // TODO: 根据标签加载对应内容
     },
     loadMore() {
-      // TODO: 加载更多数据
-      console.log('加载更多')
+      // TODO: 加载更多内容
     },
     async onRefresh() {
       this.isRefreshing = true
-      // TODO: 刷新数据
       await new Promise(resolve => setTimeout(resolve, 1000))
       this.isRefreshing = false
     },
-    navigateToDetail(type, id) {
+    navigateToDetail(id) {
       uni.navigateTo({
-        url: `/pages/community/${type}-detail?id=${id}`
+        url: `/pages/community/post-detail?id=${id}`
       })
     },
-    showPublishModal() {
-      this.$refs.popup.open()
-    },
-    hidePublishModal() {
-      this.$refs.popup.close()
-    },
-    navigateToPublish(type) {
-      this.hidePublishModal()
+    navigateToPublish() {
       uni.navigateTo({
-        url: `/pages/community/publish?type=${type}`
+        url: '/pages/community/publish'
       })
     }
   }
@@ -196,6 +217,11 @@ export default {
 .search-bar {
   padding: 20rpx;
   background: #fff;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
 }
 
 .search-bar input {
@@ -205,167 +231,139 @@ export default {
   font-size: 28rpx;
 }
 
-.tab-header {
-  display: flex;
+.topic-tags {
   background: #fff;
-  padding: 20rpx 0;
-  border-bottom: 1rpx solid #eee;
+  padding: 20rpx;
+  white-space: nowrap;
+  position: fixed;
+  top: 100rpx;
+  left: 0;
+  right: 0;
+  z-index: 100;
 }
 
-.tab-item {
-  flex: 1;
-  text-align: center;
-  font-size: 30rpx;
+.tag-item {
+  display: inline-block;
+  padding: 10rpx 30rpx;
+  margin-right: 20rpx;
+  border-radius: 30rpx;
+  font-size: 28rpx;
   color: #666;
-  position: relative;
-  padding: 10rpx 0;
+  background: #f5f5f5;
 }
 
-.tab-item.active {
-  color: #007AFF;
-  font-weight: bold;
-}
-
-.tab-item.active::after {
-  content: '';
-  position: absolute;
-  bottom: -20rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40rpx;
-  height: 4rpx;
+.tag-item.active {
+  color: #fff;
   background: #007AFF;
 }
 
 .content-list {
-  height: calc(100vh - 200rpx);
+  margin-top: 180rpx;
+  height: calc(100vh - 180rpx);
 }
 
-.case-item {
-  background: #fff;
-  margin: 20rpx;
-  border-radius: 12rpx;
+.waterfall {
+  display: flex;
   padding: 20rpx;
 }
 
-.case-header {
+.waterfall-left, .waterfall-right {
+  flex: 1;
   display: flex;
-  align-items: center;
-  margin-bottom: 20rpx;
+  flex-direction: column;
 }
 
-.user-avatar {
-  width: 60rpx;
-  height: 60rpx;
-  border-radius: 30rpx;
-  margin-right: 15rpx;
-}
-
-.username {
-  font-size: 28rpx;
-  color: #333;
-  margin-right: 15rpx;
-}
-
-.time {
-  font-size: 24rpx;
-  color: #999;
-}
-
-.case-content {
-  margin-bottom: 20rpx;
-}
-
-.case-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  margin-bottom: 10rpx;
-}
-
-.case-desc {
-  font-size: 28rpx;
-  color: #666;
-  line-height: 1.6;
-}
-
-.case-images {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10rpx;
-  margin-top: 20rpx;
-}
-
-.case-images image {
-  width: 100%;
-  height: 200rpx;
-  border-radius: 8rpx;
-}
-
-.case-footer {
-  display: flex;
-  justify-content: space-around;
-  border-top: 1rpx solid #eee;
-  padding-top: 20rpx;
-}
-
-.action-item {
-  display: flex;
-  align-items: center;
-  font-size: 24rpx;
-  color: #666;
-}
-
-.action-item .iconfont {
+.waterfall-left {
   margin-right: 10rpx;
-  font-size: 32rpx;
 }
 
-.qa-item {
+.waterfall-right {
+  margin-left: 10rpx;
+}
+
+.post-item {
   background: #fff;
-  margin: 20rpx;
   border-radius: 12rpx;
-  padding: 20rpx;
+  margin-bottom: 20rpx;
+  overflow: hidden;
 }
 
-.qa-header {
-  margin-bottom: 15rpx;
+.post-image {
+  width: 100%;
 }
 
-.qa-tag {
-  display: inline-block;
-  padding: 4rpx 12rpx;
+.video-container {
+  position: relative;
+  width: 100%;
+}
+
+.post-video {
+  width: 100%;
+}
+
+.video-duration {
+  position: absolute;
+  right: 10rpx;
+  bottom: 10rpx;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 4rpx 10rpx;
   border-radius: 4rpx;
   font-size: 24rpx;
-  margin-right: 10rpx;
 }
 
-.qa-tag.unsolved {
-  background: #fef0f0;
-  color: #f56c6c;
+.post-content {
+  padding: 20rpx;
 }
 
-.qa-tag.solved {
-  background: #f0f9eb;
-  color: #67c23a;
-}
-
-.qa-title {
-  font-size: 30rpx;
-  font-weight: bold;
-}
-
-.qa-content {
+.post-title {
   font-size: 28rpx;
-  color: #666;
-  margin: 15rpx 0;
+  color: #333;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
-.qa-footer {
+.post-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: 20rpx;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+}
+
+.user-avatar {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 20rpx;
+  margin-right: 10rpx;
+}
+
+.username {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.post-stats {
   font-size: 24rpx;
   color: #999;
+}
+
+.stats-item {
+  display: flex;
+  align-items: center;
+  margin-left: 20rpx;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.stats-item text {
+  margin-left: 4rpx;
 }
 
 .float-btn {
@@ -380,44 +378,11 @@ export default {
   align-items: center;
   justify-content: center;
   box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.2);
+  z-index: 100;
 }
 
 .float-btn .iconfont {
   color: #fff;
   font-size: 48rpx;
-}
-
-.popup-content {
-  background: #fff;
-  border-radius: 24rpx 24rpx 0 0;
-  padding: 30rpx;
-}
-
-.popup-title {
-  text-align: center;
-  font-size: 32rpx;
-  font-weight: bold;
-  margin-bottom: 30rpx;
-}
-
-.popup-item {
-  display: flex;
-  align-items: center;
-  padding: 30rpx 0;
-  font-size: 30rpx;
-}
-
-.popup-item .iconfont {
-  margin-right: 20rpx;
-  font-size: 40rpx;
-  color: #007AFF;
-}
-
-.popup-cancel {
-  text-align: center;
-  padding: 30rpx 0;
-  color: #999;
-  border-top: 1rpx solid #eee;
-  margin-top: 20rpx;
 }
 </style> 

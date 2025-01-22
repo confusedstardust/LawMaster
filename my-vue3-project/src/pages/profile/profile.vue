@@ -13,45 +13,46 @@
         编辑资料
       </view>
     </view>
+    
 
     <!-- 功能菜单 -->
     <view class="menu-list">
       <view class="menu-group">
         <view class="menu-item" @click="navigateTo('/pages/profile/collections')">
-          <text class="iconfont icon-collection"></text>
+          <uni-icons type="star-filled" size="30" color="#007AFF"></uni-icons>
           <text class="menu-text">点赞收藏</text>
-          <text class="iconfont icon-arrow-right"></text>
+          <uni-icons type="right" size="24" color="#999"></uni-icons>
         </view>
         <view class="menu-item" @click="navigateTo('/pages/profile/history')">
-          <text class="iconfont icon-history"></text>
+          <uni-icons type="time-filled" size="30" color="#007AFF"></uni-icons>
           <text class="menu-text">浏览历史</text>
-          <text class="iconfont icon-arrow-right"></text>
+          <uni-icons type="right" size="24" color="#999"></uni-icons>
         </view>
         <view class="menu-item" @click="navigateTo('/pages/profile/notify')">
-          <text class="iconfont icon-notify"></text>
+          <uni-icons type="notification-filled" size="30" color="#007AFF"></uni-icons>
           <text class="menu-text">我的通知</text>
-          <text class="iconfont icon-arrow-right"></text>
+          <uni-icons type="right" size="24" color="#999"></uni-icons>
         </view>
       </view>
 
       <view class="menu-group">
         <view class="menu-item" @click="navigateTo('/pages/profile/study')">
-          <text class="iconfont icon-study"></text>
+          <uni-icons type="flag-filled" size="30" color="#007AFF"></uni-icons>
           <text class="menu-text">学习记录</text>
-          <text class="iconfont icon-arrow-right"></text>
+          <uni-icons type="right" size="24" color="#999"></uni-icons>
         </view>
         <view class="menu-item" @click="navigateTo('/pages/profile/questions')">
-          <text class="iconfont icon-question"></text>
+          <uni-icons type="help-filled" size="30" color="#007AFF"></uni-icons>
           <text class="menu-text">我的问答</text>
-          <text class="iconfont icon-arrow-right"></text>
+          <uni-icons type="right" size="24" color="#999"></uni-icons>
         </view>
       </view>
 
       <view class="menu-group">
         <view class="menu-item" @click="handleLogout">
-          <text class="iconfont icon-logout"></text>
+          <uni-icons type="poweroff" size="30" color="#007AFF"></uni-icons>
           <text class="menu-text">退出登录</text>
-          <text class="iconfont icon-arrow-right"></text>
+          <uni-icons type="right" size="24" color="#999"></uni-icons>
         </view>
       </view>
     </view>
