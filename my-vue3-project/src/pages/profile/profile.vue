@@ -5,7 +5,9 @@
       <view class="user-info">
         <image class="avatar" :src="userInfo.avatar || '/static/default-avatar.png'" @click="changeAvatar"></image>
         <view class="info-content">
-          <text class="nickname">{{userInfo.nickname || '未设置昵称'}}</text>
+          <text class="nickname">{{ userInfo.nickname || '未设置昵称' }}</text>
+          <text class="user-id">用户名: {{ userInfo.username || '未设置用户名' }}</text>
+          <text class="user-role">角色: {{ userInfo.role || '未设置角色' }}</text>
         </view>
       </view>
       <view class="edit-btn" @click="navigateTo('/pages/profile/edit')">
@@ -65,20 +67,26 @@ export default {
     return {
       userInfo: {
         avatar: '',
-        nickname: ''
+        nickname: '',
+        username: '',
+        role: ''
       }
     }
   },
-  onShow() {
-    this.getUserInfo()
+  mounted() {
+    // 从本地存储中获取用户信息
+    const storedUserInfo = uni.getStorageSync('userInfo');
+    if (storedUserInfo) {
+      this.userInfo = {
+        avatar: "http://localhost:8080/files/download/"+storedUserInfo.avatar, // 获取用户头像storedUserInfo.avatar,
+        nickname: storedUserInfo.nickname,
+        username: storedUserInfo.username,
+        role: storedUserInfo.role,
+        id:storedUserInfo.id
+      }; // 更新 userInfo
+    }
   },
   methods: {
-    getUserInfo() {
-      const userInfo = uni.getStorageSync('userInfo')
-      if (userInfo) {
-        this.userInfo = userInfo
-      }
-    },
     navigateTo(url) {
       uni.navigateTo({
         url
@@ -142,6 +150,11 @@ export default {
 }
 
 .user-id {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.user-role {
   font-size: 24rpx;
   color: #999;
 }

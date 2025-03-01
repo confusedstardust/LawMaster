@@ -10,31 +10,34 @@
       <view class="author-info">
         <image class="avatar" :src="postDetail.userAvatar"></image>
         <view class="author-detail">
-          <text class="nickname">{{postDetail.username}}</text>
-          <text class="time">{{postDetail.time}}</text>
+          <text class="nickname">{{ postDetail.username }}</text>
+          <text class="time">{{ postDetail.createdAt }}</text>
         </view>
         <button class="follow-btn" @click="handleFollow">
-          {{postDetail.isFollowed ? '已关注' : '关注'}}
+          {{ postDetail.isFollowed ? '已关注' : '关注' }}
         </button>
       </view>
 
       <!-- 帖子标题和内容 -->
       <view class="post-detail">
-        <text class="title">{{postDetail.title}}</text>
-        <text class="content">{{postDetail.content}}</text>
+        <text class="title">{{ postDetail.title }}</text>
+        <br/>
+        <text class="content">{{ postDetail.content }}</text>
       </view>
 
       <!-- 图片或视频展示 -->
       <view class="media-content">
         <block v-if="postDetail.type === 'image'">
-          <image 
-            v-for="(img, index) in postDetail.images" 
-            :key="index"
-            :src="img"
-            mode="widthFix"
-            class="post-image"
-            @click="previewImage(index)"
-          ></image>
+          <swiper indicator-dots autoplay>
+            <swiper-item v-for="(img, index) in postDetail.images" :key="index">
+              <image 
+                :src="img"
+                mode="widthFix"
+                class="post-image"
+                @click="previewImage(index)"
+              ></image>
+            </swiper-item>
+          </swiper>
         </block>
         <video 
           v-if="postDetail.type === 'video'"
@@ -50,28 +53,28 @@
           class="tag-item" 
           v-for="tag in postDetail.tags" 
           :key="tag"
-        >#{{tag}}</text>
+        >#{{ tag }}</text>
       </view>
 
       <!-- 互动数据 -->
       <view class="interaction-bar">
         <view class="interaction-item">
-          <text class="count">{{postDetail.views}}</text>
+          <text class="count">{{ postDetail.views }}</text>
           <text class="label">浏览</text>
         </view>
         <view class="interaction-item">
-          <text class="count">{{postDetail.likes}}</text>
+          <text class="count">{{ postDetail.likes }}</text>
           <text class="label">点赞</text>
         </view>
         <view class="interaction-item">
-          <text class="count">{{postDetail.collects}}</text>
+          <text class="count">{{ postDetail.collected }}</text>
           <text class="label">收藏</text>
         </view>
       </view>
 
       <!-- 评论区 -->
       <view class="comment-section">
-        <view class="section-title">评论 {{postDetail.comments.length}}</view>
+        <view class="section-title">评论 {{ postDetail.comments.length }}</view>
         <view 
           class="comment-item" 
           v-for="comment in postDetail.comments" 
@@ -80,10 +83,10 @@
           <image class="comment-avatar" :src="comment.userAvatar"></image>
           <view class="comment-content">
             <view class="comment-header">
-              <text class="comment-username">{{comment.username}}</text>
-              <text class="comment-time">{{comment.time}}</text>
+              <text class="comment-username">{{ comment.username }}</text>
+              <text class="comment-time">{{ comment.time }}</text>
             </view>
-            <text class="comment-text">{{comment.content}}</text>
+            <text class="comment-text">{{ comment.content }}</text>
             <view class="comment-footer">
               <text class="reply-btn" @click="replyComment(comment)">
                 <uni-icons type="chatbubble" size="24"></uni-icons>
@@ -95,7 +98,7 @@
                   size="24" 
                   :color="comment.isLiked ? '#007AFF' : '#666'"
                 ></uni-icons>
-                {{comment.likes}}
+                {{ comment.likes }}
               </text>
             </view>
             <!-- 回复列表 -->
@@ -108,8 +111,8 @@
                 v-for="reply in comment.replies"
                 :key="reply.id"
               >
-                <text class="reply-username">{{reply.username}}</text>
-                <text class="reply-text">{{reply.content}}</text>
+                <text class="reply-username">{{ reply.username }}</text>
+                <text class="reply-text">{{ reply.content }}</text>
               </view>
             </view>
           </view>
@@ -157,6 +160,8 @@
 </template>
 
 <script>
+import { apiRequest } from '@/utils/api'; // 引入 API 请求方法
+
 export default {
   data() {
     return {
@@ -166,92 +171,155 @@ export default {
       commentText: '',
       replyTo: '',
       postDetail: {
-        id: 1,
-        type: 'image',
-        userAvatar: '/static/avatar1.jpg',
-        username: '法律顾问小王',
-        time: '2小时前',
+        id: '',
+        type: '',
+        userAvatar: '',
+        username: '',
+        createdAt: '',
         isFollowed: false,
-        title: '租房合同纠纷怎么解决？分享一个真实案例',
-        content: '最近遇到了一个租房纠纷案例，和大家分享一下处理经验...',
-        images: ['/static/post1.jpg', '/static/post2.jpg'],
-        tags: ['租房纠纷', '合同法', '法律咨询'],
-        views: 1234,
-        likes: 88,
-        collects: 45,
+        title: '',
+        content: '',
+        images: [],
+        tags: [],
+        views: 0,
+        likes: 0,
+        collected: 0, // 添加收藏数
         isLiked: false,
         isCollected: false,
-        comments: [
-          {
-            id: 1,
-            userAvatar: '/static/avatar2.jpg',
-            username: '用户A',
-            time: '1小时前',
-            content: '分享得很详细，学习了！',
-            likes: 12,
-            replies: [
-              {
-                id: 1,
-                username: '法律顾问小王',
-                content: '谢谢支持！'
-              }
-            ]
-          }
-        ]
+        comments: []
       }
     }
   },
   onLoad(options) {
-    this.postId = options.id
-    // TODO: 根据ID获取帖子详情
+    this.postId = options.id;
+    this.fetchPostDetail();
+    this.userInfo=uni.getStorageSync('userInfo'); // 根据ID获取帖子详情
   },
   methods: {
+    async fetchPostDetail() {
+      try {
+        const response = await apiRequest(`posts/${this.postId}`, 'get'); // 获取帖子详情
+
+        // 解析图片数组
+        const imagesArray = JSON.parse(response.images); // 将字符串解析为数组
+        const imagesUrls = imagesArray.map(imageName => {
+          return `http://localhost:8080/files/download/${imageName}`; // 拼接完整的图片 URL
+        });
+        
+        const userAvatarurl = "http://localhost:8080/files/download/"+response.avatar; // 获取用户头像
+        console.log(response.avatar)
+        this.postDetail = {
+          id: response.id,
+          type: imagesArray.length > 0 ? 'image' : 'video',
+          userAvatar: userAvatarurl, // 使用获取的用户头像
+          username: response.username,
+          createdAt: response.createdAt,
+          isFollowed: false,
+          title: response.title,
+          content: response.content,
+          images: imagesUrls, // 使用拼接的图片 URL
+          tags: JSON.parse(response.tags),
+          views: response.views,
+          likes: response.likes,
+          collected: response.collected, // 使用获取的收藏数
+          isLiked: false,
+          isCollected: false,
+          comments: []
+        };
+      } catch (error) {
+        console.error('获取帖子详情失败:', error);
+      }
+    },
     handleFollow() {
-      this.postDetail.isFollowed = !this.postDetail.isFollowed
+      this.postDetail.isFollowed = !this.postDetail.isFollowed;
       uni.showToast({
         title: this.postDetail.isFollowed ? '已关注' : '已取消关注',
         icon: 'none'
-      })
+      });
     },
     previewImage(index) {
       uni.previewImage({
         urls: this.postDetail.images,
         current: index
-      })
+      });
     },
-    handleLike() {
-      this.postDetail.isLiked = !this.postDetail.isLiked
-      this.postDetail.likes += this.postDetail.isLiked ? 1 : -1
-      uni.showToast({
-        title: this.postDetail.isLiked ? '已点赞' : '已取消点赞',
-        icon: 'none'
-      })
+    async handleLike() {
+      this.postDetail.isLiked = !this.postDetail.isLiked;
+      this.postDetail.likes += this.postDetail.isLiked ? 1 : -1;
+
+      // 发送点赞请求到后端
+      try {
+        await apiRequest(`posts/edit`, 'post', {
+          likes: this.postDetail.likes,
+          id: this.postDetail.id,
+          views: this.postDetail.views + 1
+        });
+
+        // 发送用户点赞请求
+        await apiRequest(`favorites/togglefavorites`, 'post', {
+          userId: this.userInfo.id, // 假设 userId 是在 data 中定义的
+          postId: this.postDetail.id
+        });
+
+        uni.showToast({
+          title: this.postDetail.isLiked ? '已点赞' : '已取消点赞',
+          icon: 'none'
+        });
+      } catch (error) {
+        console.error("点赞失败", error);
+        uni.showToast({
+          title: '点赞失败，请重试',
+          icon: 'none'
+        });
+      }
     },
-    handleCollect() {
-      this.postDetail.isCollected = !this.postDetail.isCollected
-      this.postDetail.collects += this.postDetail.isCollected ? 1 : -1
-      uni.showToast({
-        title: this.postDetail.isCollected ? '已收藏' : '已取消收藏',
-        icon: 'none'
-      })
+    async handleCollect() {
+      this.postDetail.isCollected = !this.postDetail.isCollected;
+      this.postDetail.collected += this.postDetail.isCollected ? 1 : -1;
+
+      // 发送收藏请求到后端
+      try {
+        await apiRequest(`posts/edit`, 'post', {
+          collected: this.postDetail.collected,
+          id: this.postDetail.id,
+          views: this.postDetail.views + 1
+        });
+
+        // 发送用户收藏请求
+        await apiRequest(`collects/togglecollect`, 'post', {
+          userId: this.userInfo.id, // 假设 userId 是在 data 中定义的
+          postId: this.postDetail.id
+        });
+
+        uni.showToast({
+          title: this.postDetail.isCollected ? '已收藏' : '已取消收藏',
+          icon: 'none'
+        });
+      } catch (error) {
+        console.error("收藏失败", error);
+        uni.showToast({
+          title: '收藏失败，请重试',
+          icon: 'none'
+        });
+      }
     },
     handleShare() {
       uni.showShareMenu({
         withShareTicket: true,
         menus: ['shareAppMessage', 'shareTimeline']
-      })
+      });
     },
     replyComment(comment) {
-      this.replyTo = comment.username
-      this.showKeyboard = true
+      this.replyTo = comment.username;
+      this.showKeyboard = true;
     },
     onFocus(e) {
-      this.keyboardHeight = e.detail.height || 0
+      this.keyboardHeight = e.detail.height || 0;
     },
     onBlur() {
-      this.keyboardHeight = 0
-      this.showKeyboard = false
-      this.replyTo = ''
+      this.keyboardHeight = 0;
+      this.showKeyboard = false;
+      this.replyTo = '';
     }
   }
 }
@@ -332,6 +400,9 @@ export default {
 
 .post-image {
   width: 100%;
+  max-width: 300rpx;
+  max-height: 200rpx;
+  object-fit: cover;
   margin-bottom: 10rpx;
 }
 

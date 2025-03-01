@@ -44,33 +44,27 @@
     <!-- 注册表单 -->
     <view class="form-container" v-if="activeTab === 'register'">
       <view class="input-group">
+        <text class="iconfont icon-user"></text>
+        <input 
+          type="text" 
+          v-model="registerForm.username" 
+          placeholder="请输入用户名"
+        />
+      </view>
+      <view class="input-group">
         <text class="iconfont icon-phone"></text>
         <input 
-          type="number" 
+          type="text" 
           v-model="registerForm.phone" 
           placeholder="请输入手机号"
         />
-      </view>
-      <view class="input-group verification">
-        <input 
-          type="number" 
-          v-model="registerForm.code" 
-          placeholder="请输入验证码"
-        />
-        <button 
-          class="verify-btn" 
-          :disabled="isCountingDown"
-          @click="sendVerificationCode"
-        >
-          {{ countDownText }}
-        </button>
       </view>
       <view class="input-group">
         <text class="iconfont icon-password"></text>
         <input 
           type="password" 
           v-model="registerForm.password" 
-          placeholder="请设置密码"
+          placeholder="请输入密码"
         />
       </view>
       <view class="input-group">
@@ -99,6 +93,8 @@
 </template>
 
 <script>
+import { apiRequest } from '@/utils/api'; // 引入 API 请求方法
+
 export default {
   data() {
     return {
@@ -108,8 +104,8 @@ export default {
         password: ''
       },
       registerForm: {
+        username: '',
         phone: '',
-        code: '',
         password: '',
         confirmPassword: ''
       },
@@ -123,83 +119,101 @@ export default {
     }
   },
   methods: {
-    handleLogin() {
+    async handleLogin() {
       if (!this.loginForm.username || !this.loginForm.password) {
         uni.showToast({
           title: '请填写完整登录信息',
           icon: 'none'
-        })
-        return
+        });
+        return;
       }
       
       // 模拟登录成功
       uni.showLoading({
         title: '登录中...'
-      })
+      });
       
-      // 这里应该是实际的登录接口调用
-      setTimeout(() => {
-        uni.hideLoading()
+      try {
+        const response = await apiRequest('users/login', 'post', {
+          username: this.loginForm.username,
+          password: this.loginForm.password
+        });
         
-        // 存储登录状态和用户信息
-        uni.setStorageSync('token', 'mock_token')
-        uni.setStorageSync('userInfo', {
-          id: '1',
-          username: this.loginForm.username
-        })
-        
-        // 显示登录成功提示
-        uni.showToast({
-          title: '登录成功',
-          icon: 'success',
-          duration: 1500
-        })
-        
-        // 延迟跳转到首页
-        setTimeout(() => {
-          uni.reLaunch({
-            url: '/pages/index/index'
-          })
-        }, 1500)
-      }, 1000)
-    },
-    handleRegister() {
-      if (!this.registerForm.phone || !this.registerForm.code || 
-          !this.registerForm.password || !this.registerForm.confirmPassword) {
-        uni.showToast({
-          title: '请填写完整注册信息',
-          icon: 'none'
-        })
-        return
-      }
-      if (this.registerForm.password !== this.registerForm.confirmPassword) {
-        uni.showToast({
-          title: '两次输入的密码不一致',
-          icon: 'none'
-        })
-        return
-      }
-      // TODO: 实现注册逻辑
-      console.log('注册表单：', this.registerForm)
-    },
-    sendVerificationCode() {
-      if (!this.registerForm.phone) {
-        uni.showToast({
-          title: '请输入手机号',
-          icon: 'none'
-        })
-        return
-      }
-      this.isCountingDown = true
-      this.countdown = 60
-      const timer = setInterval(() => {
-        this.countdown--
-        if (this.countdown <= 0) {
-          clearInterval(timer)
-          this.isCountingDown = false
+        if (response) {
+          // 存储登录状态和用户信息
+          uni.setStorageSync('token', 'mock_token'); // 这里可以替换为实际的 token
+          uni.setStorageSync('userInfo', {
+            id: response.id, // 这里可以替换为实际的用户 ID
+            username:response.username,
+            role:response.role,
+            nickname:response.nickname,
+            createdAt: response.createdAt, // 这里可以替换为实际的创建时间
+            updatedAt:response.updatedAt,
+            avatar:response.avatar
+          });
+          
+          // 显示登录成功提示
+          uni.showToast({
+            title: '登录成功',
+            icon: 'success',
+            duration: 1500
+          });
+          
+          // 延迟跳转到首页
+          setTimeout(() => {
+            uni.reLaunch({
+              url: '/pages/index/index'
+            });
+          }, 1500);
+        }else{
+          uni.showToast({
+            title: '用户名或密码错误',
+            icon: 'error',
+            duration: 1500
+          });
         }
-      }, 1000)
-      // TODO: 实现发送验证码逻辑
+      } catch (error) {
+        uni.showToast({
+          title: '登录失败，请重试',
+          icon: 'none'
+        });
+      } finally {
+        uni.hideLoading();
+      }
+    },
+    async loginWithWeChat() {
+      // 调用微信登录接口
+      wx.login({
+        success: (res) => {
+          if (res.code) {
+            // 获取用户信息
+            wx.getUserInfo({
+              success: (userInfoRes) => {
+                const { nickName, avatarUrl } = userInfoRes.userInfo;
+                this.registerForm.nickname = nickName;
+                this.registerForm.phone = ''; // 这里可以通过其他方式获取用户手机号
+                this.registerUser(nickName, avatarUrl);
+              },
+              fail: (error) => {
+                console.error("获取用户信息失败", error);
+              }
+            });
+          } else {
+            console.error("微信登录失败", res.errMsg);
+          }
+        }
+      });
+    },
+    registerUser(nickName, avatarUrl) {
+      // 发送注册请求到后端
+      this.$http.post('/api/register', { nickName, phone: this.registerForm.phone, avatarUrl })
+        .then(response => {
+          // 处理注册成功的逻辑
+          console.log("注册成功", response);
+        })
+        .catch(error => {
+          console.error("注册失败", error);
+        });
     },
     forgotPassword() {
       // TODO: 实现忘记密码逻辑
@@ -207,6 +221,45 @@ export default {
         title: '忘记密码功能开发中',
         icon: 'none'
       })
+    },
+    async handleRegister() {
+      if (!this.registerForm.username || !this.registerForm.phone || 
+          !this.registerForm.password || !this.registerForm.confirmPassword) {
+        uni.showToast({
+          title: '请填写完整注册信息',
+          icon: 'none'
+        });
+        return;
+      }
+      if (this.registerForm.password !== this.registerForm.confirmPassword) {
+        uni.showToast({
+          title: '两次输入的密码不一致',
+          icon: 'none'
+        });
+        return;
+      }
+      
+      // 使用封装的 API 方法发送注册请求
+      try {
+        const response = await apiRequest('users/register', 'post', {
+          username: this.registerForm.username,
+          phone: this.registerForm.phone,
+          password: this.registerForm.password
+        });
+        
+        console.log("注册成功", response);
+        uni.showToast({
+          title: '注册成功',
+          icon: 'success'
+        });
+        // 可以在这里跳转到登录页面或其他页面
+      } catch (error) {
+        console.error("注册失败", error);
+        uni.showToast({
+          title: '注册失败，请重试',
+          icon: 'none'
+        });
+      }
     }
   }
 }

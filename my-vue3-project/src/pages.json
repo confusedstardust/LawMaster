@@ -27,7 +27,7 @@
 				"navigationBarTitleText": "",
 				"enablePullDownRefresh": true
 			}
-		},
+		},	
 		{
 			"path": "pages/profile/edit",
 			"style": {
@@ -47,6 +47,25 @@
 			"style": {
 				"navigationBarTitleText": "帖子详情"
 			}
+		},
+		{
+			"path": "pages/quiz/quiz",
+			"style": {
+				"navigationBarTitleText": "答题",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/quiz/daily-quiz",
+			"style": {
+				"navigationBarTitleText": "每日答题"
+			}
+		},
+		{
+			"path": "pages/quiz/special-quiz",
+			"style": {
+				"navigationBarTitleText": "专项答题"
+			}
 		}
 	],
 	"tabBar": {
@@ -59,25 +78,25 @@
 				"pagePath": "pages/index/index",
 				"text": "首页",
 				"iconPath": "static/tabbar/home.png",
-				"selectedIconPath": "static/tabbar/home-active.png"
+				"selectedIconPath": "static/tabbar/home.png"
 			},
 			{
 				"pagePath": "pages/community/community",
 				"text": "社区",
-				"iconPath": "static/tabbar/community.png",
-				"selectedIconPath": "static/tabbar/community-active.png"
+				"iconPath": "static/tabbar/binoculars.png",
+				"selectedIconPath": "static/tabbar/binoculars.png"
 			},
 			{
 				"pagePath": "pages/quiz/quiz",
 				"text": "答题",
-				"iconPath": "static/tabbar/quiz.png",
-				"selectedIconPath": "static/tabbar/quiz-active.png"
+				"iconPath": "static/tabbar/file-text.png",
+				"selectedIconPath": "static/tabbar/file-text.png"
 			},
 			{
 				"pagePath": "pages/profile/profile",
 				"text": "我的",
-				"iconPath": "static/tabbar/profile.png",
-				"selectedIconPath": "static/tabbar/profile-active.png"
+				"iconPath": "static/tabbar/user.png",
+				"selectedIconPath": "static/tabbar/user.png"
 			}
 		]
 	},

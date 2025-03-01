@@ -37,18 +37,10 @@
           >
             <image 
               class="post-image" 
-              :src="item.cover" 
+              :src="item.images[0]" 
               mode="widthFix"
-              v-if="item.type === 'image'"
+              v-if="item.images.length > 0"
             ></image>
-            <view class="video-container" v-if="item.type === 'video'">
-              <video 
-                :src="item.video"
-                :poster="item.cover"
-                class="post-video"
-              ></video>
-              <view class="video-duration">{{item.duration}}</view>
-            </view>
             <view class="post-content">
               <text class="post-title">{{item.title}}</text>
               <view class="post-footer">
@@ -83,18 +75,10 @@
           >
             <image 
               class="post-image" 
-              :src="item.cover" 
+              :src="item.images[0]" 
               mode="widthFix"
-              v-if="item.type === 'image'"
+              v-if="item.images.length > 0"
             ></image>
-            <view class="video-container" v-if="item.type === 'video'">
-              <video 
-                :src="item.video"
-                :poster="item.cover"
-                class="post-video"
-              ></video>
-              <view class="video-duration">{{item.duration}}</view>
-            </view>
             <view class="post-content">
               <text class="post-title">{{item.title}}</text>
               <view class="post-footer">
@@ -125,12 +109,14 @@
 
     <!-- 悬浮发布按钮 -->
     <view class="float-btn" @click="navigateToPublish">
-      <text class="iconfont icon-add"></text>
+      <image src="/static/static/tabbar/arrow-up.svg" mode="aspectFit" class="add-icon" />
     </view>
   </view>
 </template>
 
 <script>
+import { apiRequest, getUserImage } from '@/utils/api'; // 引入 API 请求方法
+
 export default {
   data() {
     return {
@@ -145,63 +131,66 @@ export default {
         { id: 'labor', name: '劳动法律' },
         { id: 'property', name: '房产法律' }
       ],
-      leftList: [
-        {
-          id: 1,
-          type: 'image',
-          cover: '/static/post1.jpg',
-          title: '租房合同纠纷怎么解决？分享一个真实案例',
-          userAvatar: '/static/avatar1.jpg',
-          username: '法律顾问小王',
-          likes: 1234
-        },
-        {
-          id: 2,
-          type: 'video',
-          video: '/static/video1.mp4',
-          cover: '/static/cover1.jpg',
-          duration: '2:30',
-          title: '一分钟了解劳动合同签订注意事项',
-          userAvatar: '/static/avatar2.jpg',
-          username: '法律小课堂',
-          likes: 2345
-        }
-      ],
-      rightList: [
-        {
-          id: 3,
-          type: 'image',
-          cover: '/static/post2.jpg',
-          title: '遇到交通事故如何正确处理？',
-          userAvatar: '/static/avatar3.jpg',
-          username: '资深律师张三',
-          likes: 3456
-        }
-      ]
+      leftList: [],
+      rightList: []
     }
   },
+  mounted() {
+    this.fetchPosts(); // 组件挂载时获取帖子
+  },
   methods: {
+    async fetchPosts() {
+      try {
+        const response = await apiRequest('posts', 'get'); // 获取帖子数据
+        const posts = await Promise.all(response.map(async post => {
+          // 解析图片数组
+          const imagesArray = JSON.parse(post.images); // 将字符串解析为数组
+
+          // 拼接每个图片的完整 URL
+          const imagesUrls = imagesArray.map(imageName => {
+            return `http://localhost:8080/files/download/${imageName}`; // 拼接完整的图片 URL
+          });
+
+          return {
+            id: post.id,
+            title: post.title,
+            content: post.content,
+            images: imagesUrls, // 使用拼接的图片 URL
+            userAvatar: post.Avatar, // 这里可以替换为实际的用户头像
+            username: '用户' + post.userId,
+            likes: post.likes,
+            comments: post.comments,
+            isLiked: false
+          };
+        }));
+
+        this.leftList = posts.filter((_, index) => index % 2 === 0);
+        this.rightList = posts.filter((_, index) => index % 2 !== 0);
+      } catch (error) {
+        console.error('获取帖子失败:', error);
+      }
+    },
     switchTag(tagId) {
-      this.currentTag = tagId
+      this.currentTag = tagId;
       // TODO: 根据标签加载对应内容
     },
     loadMore() {
       // TODO: 加载更多内容
     },
     async onRefresh() {
-      this.isRefreshing = true
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      this.isRefreshing = false
+      this.isRefreshing = true;
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      this.isRefreshing = false;
     },
     navigateToDetail(id) {
       uni.navigateTo({
         url: `/pages/community/post-detail?id=${id}`
-      })
+      });
     },
     navigateToPublish() {
       uni.navigateTo({
         url: '/pages/community/publish'
-      })
+      });
     }
   }
 }
@@ -286,10 +275,14 @@ export default {
   border-radius: 12rpx;
   margin-bottom: 20rpx;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .post-image {
   width: 100%;
+  height: 200rpx;
+  object-fit: cover;
 }
 
 .video-container {

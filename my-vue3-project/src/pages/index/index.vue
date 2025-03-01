@@ -7,8 +7,9 @@
     
     <!-- 轮播图区域 -->
     <swiper class="banner" :indicator-dots="true" :autoplay="true">
-      <swiper-item v-for="(item, index) in bannerList" :key="index">
+      <swiper-item v-for="(item, index) in bannerList" :key="index" @click="navigateToDetail('rotat'  ,item.id)">
         <image :src="item.image" mode="aspectFill"></image>
+        <view class="banner-title">{{ item.title }}</view>
       </swiper-item>
     </swiper>
 
@@ -88,16 +89,14 @@
 </template>
 
 <script>
+import { apiRequest } from '@/utils/api'; // 引入 API 请求方法
+
 export default {
   data() {
     return {
       currentTab: 'knowledge',
       isRefreshing: false,
-      bannerList: [
-        { image: '/static/banner1.jpg' },
-        { image: '/static/banner2.jpg' },
-        { image: '/static/banner3.jpg' }
-      ],
+      bannerList: [], // 初始化为空数组
       knowledgeList: [
         {
           id: 1,
@@ -123,7 +122,22 @@ export default {
       ]
     }
   },
+  created() {
+    this.fetchBannerList(); // 在组件创建时获取轮播图数据
+  },
   methods: {
+    async fetchBannerList() {
+      try {
+        const response = await apiRequest('posts/tag/rotat', 'get'); // 获取轮播图数据
+        this.bannerList = response; // 假设返回的数据结构是数组
+      } catch (error) {
+        console.error("获取轮播图失败", error);
+        uni.showToast({
+          title: '获取轮播图失败，请重试',
+          icon: 'none'
+        }); 
+      }
+    },
     switchTab(tab) {
       this.currentTab = tab
     },
@@ -136,9 +150,14 @@ export default {
       this.isRefreshing = false
     },
     navigateToDetail(type, id) {
+      console.log(id)
       uni.navigateTo({
-        url: `/pages/${type}/detail?id=${id}`
+        // url: `/posts/${id}`
+        url: `/pages/community/post-detail?id=${id}`
       })
+    },
+    onShow:function(){
+    console.log("ssada")
     }
   }
 }
@@ -164,11 +183,22 @@ export default {
 
 .banner {
   height: 300rpx;
+  position: relative;
 }
 
 .banner image {
   width: 100%;
   height: 100%;
+}
+
+.banner-title {
+  position: absolute;
+  bottom: 10rpx;
+  left: 10rpx;
+  color: #fff;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 10rpx;
+  border-radius: 5rpx;
 }
 
 .tab-header {
