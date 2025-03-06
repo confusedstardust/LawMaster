@@ -20,14 +20,14 @@
     <!-- 功能菜单 -->
     <view class="menu-list">
       <view class="menu-group">
-        <view class="menu-item" @click="navigateTo('/pages/profile/collections')">
-          <uni-icons type="star-filled" size="30" color="#007AFF"></uni-icons>
-          <text class="menu-text">点赞收藏</text>
+        <view class="menu-item" @click="navigateTo('/pages/profile/my-likes')">
+          <uni-icons type="heart-filled" size="30" color="#007AFF"></uni-icons>
+          <text class="menu-text">我的点赞</text>
           <uni-icons type="right" size="24" color="#999"></uni-icons>
         </view>
-        <view class="menu-item" @click="navigateTo('/pages/profile/history')">
-          <uni-icons type="time-filled" size="30" color="#007AFF"></uni-icons>
-          <text class="menu-text">浏览历史</text>
+        <view class="menu-item" @click="navigateTo('/pages/profile/my-collections')">
+          <uni-icons type="star-filled" size="30" color="#007AFF"></uni-icons>
+          <text class="menu-text">我的收藏</text>
           <uni-icons type="right" size="24" color="#999"></uni-icons>
         </view>
         <view class="menu-item" @click="navigateTo('/pages/profile/notify')">

@@ -66,7 +66,26 @@
 			"style": {
 				"navigationBarTitleText": "专项答题"
 			}
+		},
+		{
+			"path": "pages/profile/my-collections",
+			"style": {
+				"navigationBarTitleText": "我的收藏"
+			}
+		},
+		{
+			"path": "pages/profile/my-likes",
+			"style": {
+				"navigationBarTitleText": "我的点赞"
+			}
+		},
+		{
+			"path": "pages/community/publish",
+			"style": {
+				"navigationBarTitleText": "发布"
+			}
 		}
+
 	],
 	"tabBar": {
 		"color": "#999999",

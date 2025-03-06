@@ -33,7 +33,7 @@
             class="post-item" 
             v-for="item in leftList" 
             :key="item.id"
-            @click="navigateToDetail(item.id)"
+            @click="navigateToDetail(item.id,item.comments)"
           >
             <image 
               class="post-image" 
@@ -59,7 +59,7 @@
                   </text>
                   <text class="stats-item">
                     <uni-icons type="chatbubble" size="16" color="#666"></uni-icons>
-                    <text>{{item.comments}}</text>
+                    <text>{{item.comments.length}}</text>
                   </text>
                 </view>
               </view>
@@ -97,7 +97,7 @@
                   </text>
                   <text class="stats-item">
                     <uni-icons type="chatbubble" size="16" color="#666"></uni-icons>
-                    <text>{{item.comments}}</text>
+                    <text>{{item.comments.length}}</text>
                   </text>
                 </view>
               </view>
@@ -109,8 +109,9 @@
 
     <!-- 悬浮发布按钮 -->
     <view class="float-btn" @click="navigateToPublish">
-      <image src="/static/static/tabbar/arrow-up.svg" mode="aspectFit" class="add-icon" />
+      <image src="/static/tabbar/plus.png" mode="aspectFit" class="add-icon" />
     </view>
+    
   </view>
 </template>
 
@@ -150,6 +151,7 @@ export default {
           const imagesUrls = imagesArray.map(imageName => {
             return `http://localhost:8080/files/download/${imageName}`; // 拼接完整的图片 URL
           });
+          const commentsCount = await this.fetchComments(post.id); // 获取评论
 
           return {
             id: post.id,
@@ -159,7 +161,7 @@ export default {
             userAvatar: post.Avatar, // 这里可以替换为实际的用户头像
             username: '用户' + post.userId,
             likes: post.likes,
-            comments: post.comments,
+            comments: commentsCount,
             isLiked: false
           };
         }));
@@ -168,6 +170,15 @@ export default {
         this.rightList = posts.filter((_, index) => index % 2 !== 0);
       } catch (error) {
         console.error('获取帖子失败:', error);
+      }
+    },
+        async fetchComments(postId) {
+      try {
+        const response = await apiRequest(`comments/post/${postId}`, 'get');
+        return response
+      } catch (error) {
+        console.error('获取评论失败:', error);
+        return 0; // 如果失败，返回 0
       }
     },
     switchTag(tagId) {
@@ -182,14 +193,16 @@ export default {
       await new Promise(resolve => setTimeout(resolve, 1000));
       this.isRefreshing = false;
     },
-    navigateToDetail(id) {
+    navigateToDetail(id,comments) {
       uni.navigateTo({
-        url: `/pages/community/post-detail?id=${id}`
+        url: `/pages/community/post-detail?id=${id}&comments=${JSON.stringify(comments)}`
+        
       });
     },
     navigateToPublish() {
       uni.navigateTo({
-        url: '/pages/community/publish'
+        url: '/pages/community/publish',
+        userInfo:userInfo
       });
     }
   }
@@ -363,9 +376,9 @@ export default {
   position: fixed;
   right: 30rpx;
   bottom: 120rpx;
-  width: 100rpx;
-  height: 100rpx;
-  background: #007AFF;
+  width: 80rpx;
+  height: 80rpx;
+  background: #FF0000;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -374,8 +387,8 @@ export default {
   z-index: 100;
 }
 
-.float-btn .iconfont {
-  color: #fff;
-  font-size: 48rpx;
+.float-btn .add-icon {
+  width: 50rpx;
+  height: 50rpx;
 }
 </style> 

@@ -84,9 +84,10 @@
           <view class="comment-content">
             <view class="comment-header">
               <text class="comment-username">{{ comment.username }}</text>
-              <text class="comment-time">{{ comment.time }}</text>
+              <text class="comment-time">{{ formatDate(comment.createdAt) }}</text>
             </view>
             <text class="comment-text">{{ comment.content }}</text>
+            
             <view class="comment-footer">
               <text class="reply-btn" @click="replyComment(comment)">
                 <uni-icons type="chatbubble" size="24"></uni-icons>
@@ -123,7 +124,7 @@
     <!-- 底部操作栏 -->
     <view class="bottom-bar" :style="{ bottom: keyboardHeight + 'px' }">
       <view class="comment-input">
-        <uni-icons type="chatbubble" size="24" color="#999"></uni-icons>
+       <!-- <uni-icons type="chatbubble" size="24" color="#999"></uni-icons>-->
         <input 
           type="text"
           v-model="commentText"
@@ -132,6 +133,11 @@
           @focus="onFocus"
           @blur="onBlur"
         />
+        <button 
+          @click="submitComment" 
+          class="send-button" 
+          :style="{ display: commentText ? '' : 'none' }"
+        >发送</button>
       </view>
       <view class="action-buttons">
         <view class="action-item" :class="{ active: postDetail.isLiked }" @click="handleLike">
@@ -150,17 +156,20 @@
           ></uni-icons>
           <text>收藏</text>
         </view>
+        <!---
         <view class="action-item" @click="handleShare">
           <uni-icons type="redo" size="30" color="#666"></uni-icons>
           <text>分享</text>
         </view>
+  -->
       </view>
     </view>
   </view>
 </template>
 
 <script>
-import { apiRequest } from '@/utils/api'; // 引入 API 请求方法
+import { apiRequest ,getUserInfoById,getUserImage} from '@/utils/api'; // 引入 API 请求方法
+// import {getUserInfoById} from '@/utils/api';
 
 export default {
   data() {
@@ -183,19 +192,47 @@ export default {
         tags: [],
         views: 0,
         likes: 0,
-        collected: 0, // 添加收藏数
+        collected: 0,
         isLiked: false,
         isCollected: false,
         comments: []
-      }
+      },
+      comments: [],
+      userInfo: {},
     }
   },
-  onLoad(options) {
-    this.postId = options.id;
-    this.fetchPostDetail();
-    this.userInfo=uni.getStorageSync('userInfo'); // 根据ID获取帖子详情
-  },
+onLoad(options) {
+  this.postId = options.id;
+  this.comments = JSON.parse(options.comments || "[]"); // 从参数中获取评论信息
+
+  // 异步加载评论的用户信息
+  this.loadComments();
+  this.fetchPostDetail(); // 获取文章详情
+  this.userInfo = uni.getStorageSync("userInfo"); // 获取用户信息
+},
   methods: {
+async loadComments() {
+  try {
+    const updatedComments = await Promise.all(
+      this.comments.map(async (comment) => {
+        const userInfo = await getUserInfoById(comment.userId);
+        console.log("a",userInfo)
+        return {
+          ...comment,
+          userAvatar: `http://localhost:8080/files/download/${userInfo?.userAvatar}` ,
+          username: userInfo?.username || "匿名用户",
+        };  
+      })
+    );
+
+    this.comments = updatedComments;
+    this.postDetail.comments = [...updatedComments]; // 🔥 这里更新 postDetail.comments
+    console.log(this.postDetail.comments)
+  } catch (error) {
+    console.error("获取评论用户信息失败:", error);
+  }
+}
+,
     async fetchPostDetail() {
       try {
         const response = await apiRequest(`posts/${this.postId}`, 'get'); // 获取帖子详情
@@ -224,8 +261,21 @@ export default {
           collected: response.collected, // 使用获取的收藏数
           isLiked: false,
           isCollected: false,
-          comments: []
+          comments: this.comments
         };
+
+        // 检查用户是否点赞
+        const likeResponse = await apiRequest(`favorites/queryByUserIdAndPostId?userId=${this.userInfo.id}&postId=${this.postDetail.id}`, 'get');
+        if (likeResponse ) {
+          this.postDetail.isLiked = true;
+        }
+
+        // 检查用户是否收藏
+        const collectResponse = await apiRequest(`collects/queryByUserIdAndPostId?userId=${this.userInfo.id}&postId=${this.postDetail.id}`, 'get');
+        if (collectResponse ) {
+          this.postDetail.isCollected = true;
+        }
+
       } catch (error) {
         console.error('获取帖子详情失败:', error);
       }
@@ -320,6 +370,55 @@ export default {
       this.keyboardHeight = 0;
       this.showKeyboard = false;
       this.replyTo = '';
+    },
+    async submitComment() {
+      if (!this.commentText.trim()) {
+        uni.showToast({
+          title: '评论内容不能为空',
+          icon: 'none'
+        });
+        return;
+      }
+
+      const commentData = {
+        postId: this.postId,
+        userId: this.userInfo.id, // 假设 userInfo 中有用户 ID
+        content: this.commentText,
+        likes: 0, // 初始点赞数为 0
+        createdAt: new Date().toISOString(), // 当前时间
+        updatedAt: new Date().toISOString() // 当前时间
+      };
+
+      try {
+        const response = await apiRequest('comments', 'post', commentData);
+        // 处理成功后的逻辑，例如更新评论列表
+        this.comments.push(response); // 假设后端返回新评论
+        this.commentText = ''; // 清空输入框
+        uni.showToast({
+          title: '评论成功',
+          icon: 'success'
+        });
+      } catch (error) {
+        console.error('评论失败:', error);
+        uni.showToast({
+          title: '评论失败，请重试',
+          icon: 'none'
+        });
+      }
+    },
+    formatDate(dateString) {
+    // 预处理字符串，去掉最后的 " 00:00"
+    const cleanedDateString = dateString.replace(" 00:00", "");
+    
+    // 解析成 Date 对象
+    const date = new Date(cleanedDateString);
+    
+    // 格式化为 "YYYY-MM-DD"
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // 月份从 0 开始，需要 +1
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
     }
   }
 }
@@ -545,15 +644,18 @@ export default {
 }
 
 .comment-input {
+  position: relative;
   flex: 1;
   margin-right: 20rpx;
 }
 
 .comment-input input {
   background: #f5f5f5;
-  padding: 15rpx 30rpx;
+  padding: 5px 30rpx;
   border-radius: 30rpx;
   font-size: 28rpx;
+  height: 30px;
+  line-height: 30px;
 }
 
 .action-buttons {
@@ -576,5 +678,22 @@ export default {
 .action-item .iconfont {
   font-size: 40rpx;
   margin-bottom: 6rpx;
+}
+
+.send-button {
+  position: absolute;
+  right: 10px;
+  top: 70%;
+  transform: translateY(-50%);
+  padding: -3px 10px;
+  background-color: #f00;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  height: 28px;
+  line-height: 30px;
+  visibility: visible; /* 确保按钮始终可见 */
 }
 </style> 

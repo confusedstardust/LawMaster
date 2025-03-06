@@ -8,7 +8,7 @@
     <!-- 轮播图区域 -->
     <swiper class="banner" :indicator-dots="true" :autoplay="true">
       <swiper-item v-for="(item, index) in bannerList" :key="index" @click="navigateToDetail('rotat'  ,item.id)">
-        <image :src="item.image" mode="aspectFill"></image>
+        <image :src="item.images" mode="aspectFill"></image>
         <view class="banner-title">{{ item.title }}</view>
       </swiper-item>
     </swiper>
@@ -128,8 +128,19 @@ export default {
   methods: {
     async fetchBannerList() {
       try {
-        const response = await apiRequest('posts/tag/rotat', 'get'); // 获取轮播图数据
-        this.bannerList = response; // 假设返回的数据结构是数组
+const response = await apiRequest('posts/tag/rotat', 'get'); // 获取轮播图数据
+
+      this.bannerList = response.map(item => {
+        const parsedImages = Array.isArray(item.images) ? item.images : JSON.parse(item.images);
+
+        return {
+          ...item,
+          images: parsedImages.length > 0 
+            ? `http://localhost:8080/files/download/${parsedImages[0]}` 
+            : "", // 避免 undefined
+        };
+
+      });
       } catch (error) {
         console.error("获取轮播图失败", error);
         uni.showToast({

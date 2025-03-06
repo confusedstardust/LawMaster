@@ -57,3 +57,20 @@ export const getUserImage = async (imageName) => {
     throw error;
   }
 }; 
+
+// 新增根据用户 ID 获取用户信息的 API 方法
+export const getUserInfoById = async (userId) => {
+  try {
+    const response = await apiClient.get(`users/${userId}`);
+    const userInfo = {
+      ...response,
+      userAvatar: response.avatar // 假设返回的数据结构中包含用户头像
+    };
+    return userInfo; // 返回用户信息
+  } catch (error) {
+    console.error('获取用户信息失败:', error);
+    throw error;
+  }
+};
+
+
