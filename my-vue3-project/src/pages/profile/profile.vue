@@ -30,29 +30,29 @@
           <text class="menu-text">我的收藏</text>
           <uni-icons type="right" size="24" color="#999"></uni-icons>
         </view>
-        <view class="menu-item" @click="navigateTo('/pages/profile/notify')">
+        <!-- <view class="menu-item" @click="navigateTo('/pages/profile/notify')">
           <uni-icons type="notification-filled" size="30" color="#007AFF"></uni-icons>
           <text class="menu-text">我的通知</text>
           <uni-icons type="right" size="24" color="#999"></uni-icons>
-        </view>
+        </view> -->
       </view>
 
       <view class="menu-group">
-        <view class="menu-item" @click="navigateTo('/pages/profile/study')">
+        <view class="menu-item" @click="fetchStudyRecords">
           <uni-icons type="flag-filled" size="30" color="#007AFF"></uni-icons>
           <text class="menu-text">学习记录</text>
           <uni-icons type="right" size="24" color="#999"></uni-icons>
         </view>
-        <view class="menu-item" @click="navigateTo('/pages/profile/questions')">
-          <uni-icons type="help-filled" size="30" color="#007AFF"></uni-icons>
-          <text class="menu-text">我的问答</text>
+        <view class="menu-item" @click="fetchUserPosts">
+          <uni-icons type="pyq" size="30" color="#007AFF"></uni-icons>
+          <text class="menu-text">我的发布</text>
           <uni-icons type="right" size="24" color="#999"></uni-icons>
         </view>
       </view>
 
       <view class="menu-group">
         <view class="menu-item" @click="handleLogout">
-          <uni-icons type="poweroff" size="30" color="#007AFF"></uni-icons>
+          <uni-icons type="undo-filled" size="30" color="#007AFF"></uni-icons>
           <text class="menu-text">退出登录</text>
           <uni-icons type="right" size="24" color="#999"></uni-icons>
         </view>
@@ -62,6 +62,8 @@
 </template>
 
 <script>
+import { apiRequest } from '@/utils/api';
+
 export default {
   data() {
     return {
@@ -91,6 +93,46 @@ export default {
       uni.navigateTo({
         url
       })
+    },
+    async fetchStudyRecords() {
+      const userId = this.userInfo.id; // 获取用户 ID
+      try {
+        // 请求用户的学习记录
+        const response = await apiRequest(`userAnswers/distinct/${userId}`, 'get');
+        const questionIds = response.map(item => item.questionId); // 提取问题 ID
+
+        // 请求问题的详细信息
+        const questionsResponse = await apiRequest(`questions/array?ids=${questionIds.join(',')}`, 'get');
+
+        // 将问题数据传递到 wrong-questions 页面
+        uni.navigateTo({
+          url: `/pages/quiz/wrong-questions?questions=${encodeURIComponent(JSON.stringify(questionsResponse))}&Type=record`
+        });
+      } catch (error) {
+        console.error("获取学习记录失败", error);
+        uni.showToast({
+          title: '获取学习记录失败，请重试',
+          icon: 'none'
+        });
+      }
+    },
+    async fetchUserPosts() {
+      const userId = this.userInfo.id; // 获取用户 ID
+      try {
+        // 请求用户发布的帖子
+        const response = await apiRequest(`posts/user/${userId}`, 'get');
+
+        // 将帖子数据传递到 user-posts 页面
+        uni.navigateTo({
+          url: `/pages/profile/user-posts?posts=${encodeURIComponent(JSON.stringify(response))}`
+        });
+      } catch (error) {
+        console.error("获取用户发布的帖子失败", error);
+        uni.showToast({
+          title: '获取用户发布的帖子失败，请重试',
+          icon: 'none'
+        });
+      }
     },
     handleLogout() {
       uni.showModal({

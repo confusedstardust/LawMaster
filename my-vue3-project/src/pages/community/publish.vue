@@ -13,15 +13,19 @@
       </view>
     </view>
     <view class="image-upload">
-      <button @click="chooseImage(userId, username)" class="upload-button">上传图片</button>
-      <view class="image-preview" v-if="imageUrls.length">
-        <image v-for="(url, index) in imageUrls" :key="index" :src="url" class="preview-image" />
+      <button @click="chooseImage" class="upload-button">上传图片</button>
+      <view class="image-preview" v-if="imageArray.length">
+        <image v-for="(url, index) in imageArray" :key="index" :src="url" class="preview-image" />
       </view>
     </view>
     <button @click="submitPost" class="submit-button">发布</button>
   </view>
 </template>
 
+---
+
+### **`script` 部分**
+```javascript
 <script>
 import { apiRequest } from '@/utils/api'; // 引入 API 请求方法
 
@@ -30,49 +34,87 @@ export default {
     return {
       title: '',
       content: '',
-      imageUrls: [],
+      imageArray: [], // 存储图片本地路径
+      uploadedUrls: [], // 存储上传后的 URL
       tags: [] // 存储标签
     };
   },
   methods: {
+    // 选择图片并生成唯一文件名
     chooseImage() {
       uni.chooseImage({
         success: (res) => {
-          this.imageUrls = res.tempFilePaths; // 获取选择的图片路径
-          this.imageArray=res.tempFiles.map(file=>{
-            const fileExtension = file.name.substring(file.name.lastIndexOf(".")); // 提取后缀名
-            const randomStr = Math.random().toString(36).substring(2, 8); // 生成6位随机字符串
-             // 组合新的文件名
-            const storedUserInfo = uni.getStorageSync('userInfo');
-            const newFileName = `${storedUserInfo.id}_${storedUserInfo.username}_${randomStr}${fileExtension}`;
-            return newFileName
+          const storedUserInfo = uni.getStorageSync('userInfo'); // 获取用户信息
+          this.imageArray = res.tempFilePaths; // 本地文件路径
+          this.imageNames = res.tempFiles.map(file => {
+            const fileExtension = file.name.substring(file.name.lastIndexOf(".")); // 获取后缀名
+            const randomStr = Math.random().toString(36).substring(2, 8); // 生成随机字符串
+            return `${storedUserInfo.id}_${storedUserInfo.username}_${randomStr}${fileExtension}`;
           });
-        console.log("aaa",this.imageArray)
         }
       });
     },
-    async convertBlobToBase64(blobUrl) {
-        const blob = await fetch(blobUrl).then((res) => res.blob()); // 获取 Blob 对象
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(blob);
-            reader.onloadend = () => resolve(reader.result); // 读取 Base64
-        });
-    },
-    async handleUpload() {
-        let base64Images = await Promise.all(
-        imageUrls.map((blobUrl) => convertBlobToBase64(blobUrl))
-    );},
+
+    // 处理标签提取
     handleInput() {
-      const tagPattern = /#([\u4e00-\u9fa5\w]+)/g; // 匹配以#开头的中文或字母数字单词
+      const tagPattern = /#([\u4e00-\u9fa5\w]+)/g; // 匹配 #标签
       const matches = this.content.match(tagPattern);
       this.tags = matches ? matches.map(tag => tag.substring(1)) : []; // 提取标签
     },
 
-    
-    removeTag(index) { 
-      this.tags.splice(index, 1); // 移除标签
+    removeTag(index) {
+      this.tags.splice(index, 1);
     },
+
+    // 批量上传图片
+    async uploadImages() {
+      if (!this.imageArray.length) return []; // 没有图片直接返回空数组
+
+      const uploadPromises = this.imageArray.map((filePath, index) => {
+        return new Promise((resolve, reject) => {
+          const fileNameWithoutExt = this.imageNames[index].replace(/\.[^/.]+$/, ""); // 去掉扩展名
+          uni.uploadFile({
+            url: `http://localhost:8080/files/upload`, // 后端上传接口
+            filePath: filePath,
+            name: "file",
+            formData: {
+              filename: fileNameWithoutExt// 传递新的文件名
+            },
+            success: (res) => {
+              try {
+                const response = JSON.parse(res.data);
+                if (response.success) {
+                  resolve(response.url); // 上传成功返回 URL
+                } else {
+                  reject("上传失败，请重试");
+                }
+              } catch (error) {
+                console.error("解析响应出错:", error);
+                reject("上传失败，请重试");
+              }
+            },
+            fail: (error) => {
+              console.error("上传失败:", error);
+              reject("上传失败，请重试");
+            }
+          });
+        });
+      });
+
+      try {
+        const uploadedUrls = await Promise.all(uploadPromises); // 等待所有图片上传
+        console.log("上传成功的图片 URL:", uploadedUrls);
+        return uploadedUrls;
+      } catch (error) {
+        uni.showToast({
+          title: error,
+          icon: 'none'
+        });
+        throw error;
+      }
+    },
+
+    // 先上传图片，然后提交帖子信息
     async submitPost() {
       if (!this.title || !this.content) {
         uni.showToast({
@@ -82,21 +124,30 @@ export default {
         return;
       }
 
-      const postData = {
-        title: this.title,
-        content: this.content,
-        images: this.imageUrls,
-        tags: this.tags, // 添加标签到数据中
-        imageArray:this.imageArray
-      };
-
       try {
-        const response = await apiRequest('posts', 'post', postData);
+        // 1. 先上传图片
+        this.uploadedUrls = await this.uploadImages();
+        this.uploadedUrls = this.uploadedUrls.map(url => url.substring(url.lastIndexOf('/') + 1)); // 只保留文件名
+
+        // 2. 组织帖子数据
+        const postData = {
+          title: this.title,
+          content: this.content,
+          images: JSON.stringify(this.uploadedUrls), // 这里替换为上传后的 URL
+          tags: JSON.stringify(this.tags),
+          userId: uni.getStorageSync('userInfo').id
+        };
+
+        // 3. 发送帖子信息到后端
+        const response = await apiRequest('posts/add', 'post', postData);
+
+        // 4. 显示成功提示
         uni.showToast({
           title: '发布成功',
           icon: 'success'
         });
-        // 返回到社区页面
+
+        // 5. 返回到社区页面
         uni.navigateBack();
       } catch (error) {
         console.error('发布失败:', error);
@@ -109,13 +160,12 @@ export default {
   }
 }
 </script>
-
 <style>
 .publish-container {
   padding: 20rpx;
-  background-color: #f9f9f9; /* 背景颜色 */
-  border-radius: 10rpx; /* 圆角 */
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.1); /* 阴影效果 */
+  background-color: #f9f9f9;
+  border-radius: 10rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.1);
 }
 
 .input-group {
@@ -126,14 +176,14 @@ export default {
   width: 100%;
   padding: 15rpx;
   border: 1rpx solid #ddd;
-  border-radius: 8rpx; /* 圆角 */
-  background-color: #fff; /* 输入框背景 */
-  font-size: 28rpx; /* 字体大小 */
+  border-radius: 8rpx;
+  background-color: #fff;
+  font-size: 28rpx;
 }
 
 .input-content {
-  height: 200rpx; /* 高度 */
-  resize: none; /* 禁止调整大小 */
+  height: 200rpx;
+  resize: none;
 }
 
 .tags-container {
@@ -143,10 +193,10 @@ export default {
 }
 
 .tag {
-  background-color: #FF6F61; /* 标签颜色 */
+  background-color: #FF6F61;
   color: white;
   padding: 5rpx 10rpx;
-  border-radius: 15rpx; /* 圆角 */
+  border-radius: 15rpx;
   margin-right: 10rpx;
   margin-bottom: 10rpx;
   display: flex;
@@ -164,29 +214,29 @@ export default {
 }
 
 .upload-button {
-  background-color: #FF6F61; /* 上传按钮颜色 */
+  background-color: #FF6F61;
   color: white;
   padding: 10rpx;
   border: none;
-  border-radius: 5rpx; /* 圆角 */
+  border-radius: 5rpx;
   width: 100%;
-  font-size: 28rpx; /* 字体大小 */
+  font-size: 28rpx;
 }
 
 .preview-image {
   width: 100px;
   height: 100px;
   margin-right: 10rpx;
-  border-radius: 5rpx; /* 圆角 */
+  border-radius: 5rpx;
 }
 
 .submit-button {
-  background-color: #007AFF; /* 发布按钮颜色 */
+  background-color: #007AFF;
   color: white;
   padding: 10rpx;
   border: none;
-  border-radius: 5rpx; /* 圆角 */
+  border-radius: 5rpx;
   width: 100%;
-  font-size: 28rpx; /* 字体大小 */
+  font-size: 28rpx;
 }
-</style> 
+</style>

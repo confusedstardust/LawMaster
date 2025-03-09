@@ -52,24 +52,67 @@ export default {
       }
     },
     navigateToDailyQuiz() {
-      uni.navigateTo({
-        url: '/pages/quiz/daily-quiz'
-      })
+      // 获取所有题目并随机选择 10 道题目
+      apiRequest('questions/all', 'get')
+        .then(response => {
+          const allQuestions = response; // 假设返回的数据结构是 { data: [...] }
+          const dailyQuestions = this.getRandomQuestions(allQuestions, 10); // 随机选择 10 道题目
+          uni.navigateTo({
+            url: `/pages/quiz/daily-quiz?questions=${JSON.stringify(dailyQuestions)}` // 将题目传递到每日答题页面
+          });
+        })
+        .catch(error => {
+          console.error("获取题目失败", error);
+          uni.showToast({
+            title: '获取题目失败，请重试',
+            icon: 'none'
+          });
+        });
     },
-    navigateToWrongQuestions() {
-      uni.navigateTo({
-        url: '/pages/quiz/wrong-questions'
-      })
+    async navigateToWrongQuestions() {
+      const userId = uni.getStorageSync('userInfo').id; // 获取用户 ID
+      try {
+        const response = await apiRequest(`userAnswers/incorrect/${userId}`, 'get'); // 请求用户的错题
+
+        if (response && response.length > 0) {
+          // 提取 questionId 并去重
+          const questionIds = [...new Set(response.map(item => item.questionId))];
+
+          // 请求 API 获取错题的详细信息
+          const questionsResponse = await apiRequest(`questions/array?ids=${questionIds.join(',')}`, 'get');
+
+          // 处理获取到的错题信息
+          console.log("获取到的错题信息:", questionsResponse);
+          
+          // 将错题数据传递到错题集页面
+          uni.navigateTo({
+            url: `/pages/quiz/wrong-questions?questions=${JSON.stringify(questionsResponse)}` // 将错题数据传递到下一个页面
+          });
+        } else {
+          uni.showToast({
+            title: '没有找到错题',
+            icon: 'none'
+          });
+        }
+      } catch (error) {
+        console.error("获取错题失败", error);
+        uni.showToast({
+          title: '获取错题失败，请重试',
+          icon: 'none'
+        });
+      }
     },
     async navigateToSpecialQuiz(categoryId) {
       // 在这里可以根据 categoryId 获取对应的题库
       try {
-        const response = await apiRequest(`questions/category/${categoryId}`, 'get'); // 获取对应类型的题库
-        // 假设返回的数据结构是 { data: [...] }
-        // 处理获取到的题库数据，例如存储到状态管理或跳转到题库页面
-        console.log("获取到的题库数据", response.data);
+        const response = await apiRequest(`questions/all`, 'get'); // 获取所有问题
+        const filteredQuestions = response.filter(question => question.categoryId === categoryId); // 根据 categoryId 过滤问题
+
+        console.log("获取到的题库数据", filteredQuestions);
+        
+        // 将过滤后的问题传递到下一个页面
         uni.navigateTo({
-          url: `/pages/quiz/special-quiz?id=${categoryId}`
+          url: `/pages/quiz/daily-quiz?id=${categoryId}&questions=${JSON.stringify(filteredQuestions)}`
         });
       } catch (error) {
         console.error("获取题库失败", error);
@@ -78,6 +121,10 @@ export default {
           icon: 'none'
         });
       }
+    },
+    getRandomQuestions(questions, count) {
+      const shuffled = questions.sort(() => 0.5 - Math.random()); // 打乱数组
+      return shuffled.slice(0, count); // 返回前 count 道题目
     }
   }
 }

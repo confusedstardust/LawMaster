@@ -66,6 +66,11 @@
 			"style": {
 				"navigationBarTitleText": "专项答题"
 			}
+		},{
+			"path": "pages/quiz/wrong-questions",
+			"style": {
+				"navigationBarTitleText": ""
+			}
 		},
 		{
 			"path": "pages/profile/my-collections",
@@ -84,7 +89,20 @@
 			"style": {
 				"navigationBarTitleText": "发布"
 			}
+		},
+		{
+			"path": "pages/profile/user-posts",
+			"style": {
+				"navigationBarTitleText": "我的发布"
+			}
+		},
+		{
+			"path": "pages/index/articleDetails",
+			"style": {
+				"navigationBarTitleText": ""
+			}
 		}
+
 
 	],
 	"tabBar": {

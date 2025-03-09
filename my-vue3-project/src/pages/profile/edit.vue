@@ -3,7 +3,7 @@
     <view class="form-item avatar-item">
       <text class="label">头像</text>
       <view class="avatar-wrapper" @click="changeAvatar">
-        <image class="avatar" :src="userInfo.avatar || '/static/default-avatar.png'"></image>
+        <image class="avatar" :src="tempAvatar || (userInfo.avatar ? 'http://localhost:8080/files/download/' + userInfo.avatar : '/static/default-avatar.png')"></image>
         <text class="tip">点击更换头像</text>
       </view>
     </view>
@@ -23,19 +23,23 @@
 </template>
 
 <script>
+import { apiRequest } from '@/utils/api';
+
 export default {
   data() {
     return {
       userInfo: {
         avatar: '',
         nickname: ''
-      }
-    }
+      },
+      tempAvatar: '', // 临时存储本地选择的头像
+      successfalg:false
+    };
   },
   onLoad() {
-    const userInfo = uni.getStorageSync('userInfo')
+    const userInfo = uni.getStorageSync('userInfo');
     if (userInfo) {
-      this.userInfo = JSON.parse(JSON.stringify(userInfo))
+      this.userInfo = { ...userInfo };
     }
   },
   methods: {
@@ -45,36 +49,76 @@ export default {
         sizeType: ['compressed'],
         sourceType: ['album', 'camera'],
         success: (res) => {
-          // 这里应该上传图片到服务器，获取URL
-          // 暂时直接使用本地路径
-          this.userInfo.avatar = res.tempFilePaths[0]
+          const tempFilePath = res.tempFilePaths[0];
+          this.tempAvatar = tempFilePath; // 立即更新本地显示的头像
+          this.uploadAvatar(tempFilePath);
         }
-      })
+      });
     },
-    handleSave() {
+    async uploadAvatar(filePath) {
+      const randomFileName = Math.random().toString(36).substring(2, 10);
+
+      uni.uploadFile({
+        url: `http://localhost:8080/files/upload`,
+        filePath: filePath,
+        name: "file",
+        formData: { filename: randomFileName },
+        success: (res) => {
+          try {
+            const response = JSON.parse(res.data);
+            if (response.success) {
+              this.userInfo.avatar = response.url;
+              uni.setStorageSync('userInfo', this.userInfo);
+              uni.showToast({ title: "上传成功", icon: "success" });
+              this.successfalg= true ;
+            } else {
+              uni.showToast({ title: "上传失败，请重试", icon: "none" });
+            }
+          } catch (error) {
+            console.error("解析响应出错:", error);
+            uni.showToast({ title: "上传失败，请重试", icon: "none" });
+          }
+        },
+        fail: (error) => {
+          console.error("上传失败:", error);
+          uni.showToast({ title: "上传失败，请重试", icon: "none" });
+        }
+      });
+    while (!this.successfalg) {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 每秒检查一次
+    }
+    const userAvatarName = this.userInfo.avatar ? this.userInfo.avatar.split('/').pop() : 'default_avatar.png';
+    console.log('用户头像上传名称:', userAvatarName);
+    try {
+      const response = await apiRequest('users/update', 'post', {
+        avatar: userAvatarName,
+        id:this.userInfo.id
+      });
+    } catch (error) {
+      console.error("更新用户信息失败:", error);
+      uni.showToast({ title: "头像更新失败，请重试", icon: "none" });
+    }
+    },
+   async handleSave() {
       if (!this.userInfo.nickname.trim()) {
-        uni.showToast({
-          title: '请输入昵称',
-          icon: 'none'
-        })
-        return
+        uni.showToast({ title: '请输入昵称', icon: 'none' });
+        return;
       }
+      const response = await apiRequest('users/update', 'post', {
+        nickname: this.userInfo.nickname.trim(),
+        id:this.userInfo.id
+      });
       
-      // 保存到本地存储
-      uni.setStorageSync('userInfo', this.userInfo)
+      uni.setStorageSync('userInfo', this.userInfo);
       
-      uni.showToast({
-        title: '保存成功',
-        icon: 'success',
-        duration: 1500
-      })
+      uni.showToast({ title: "保存成功", icon: 'success', duration: 1500 });
       
       setTimeout(() => {
-        uni.navigateBack()
-      }, 1500)
+        uni.navigateBack();
+      }, 1500);
     }
   }
-}
+};
 </script>
 
 <style>
@@ -135,4 +179,4 @@ export default {
   line-height: 88rpx;
   font-size: 32rpx;
 }
-</style> 
+</style>

@@ -1,13 +1,12 @@
 <template>
   <view class="community-container">
-    <!-- 顶部搜索栏 -->
+    <!-- 搜索栏 -->
     <view class="search-bar">
-      <input type="text" placeholder="搜索感兴趣的法律话题" v-model="searchText" />
+      <input type="text" placeholder="搜索法律知识、新闻资讯" v-model="searchKeyword" />
+      <uni-icons @click="searchPosts" type="search" size="30" color="#007AFF"></uni-icons>
     </view>
-
-    <!-- 话题分类标签 -->
-    <scroll-view scroll-x class="topic-tags">
-      <view 
+ <!-- 话题分类标签 -->
+ <!-- <view 
         class="tag-item" 
         :class="{ active: currentTag === tag.id }"
         v-for="tag in tags" 
@@ -15,8 +14,9 @@
         @click="switchTag(tag.id)"
       >
         {{tag.name}}
-      </view>
-    </scroll-view>
+      </view> -->
+
+   
 
     <!-- 瀑布流内容区 -->
     <scroll-view 
@@ -71,7 +71,7 @@
             class="post-item" 
             v-for="item in rightList" 
             :key="item.id"
-            @click="navigateToDetail(item.id)"
+            @click="navigateToDetail(item.id,item.comments)"
           >
             <image 
               class="post-image" 
@@ -107,11 +107,22 @@
       </view>
     </scroll-view>
 
+    <!-- 模态框 -->
+    <view v-if="isModalVisible" class="modal">
+      <view class="modal-content">
+        <text class="modal-title">搜索结果</text>
+        <text class="modal-description">找到 {{ filteredCommunityList.length }} 篇文章</text>
+        <view>
+          <text v-for="item in filteredCommunityList" :key="item.id" @click="navigateToDetail(item.id,item.comments)" class="modal-item">{{ item.title }}</text>
+        </view>
+        <button @click="closeModal">关闭</button>
+      </view>
+    </view>
+
     <!-- 悬浮发布按钮 -->
     <view class="float-btn" @click="navigateToPublish">
       <image src="/static/tabbar/plus.png" mode="aspectFit" class="add-icon" />
     </view>
-    
   </view>
 </template>
 
@@ -121,7 +132,7 @@ import { apiRequest, getUserImage } from '@/utils/api'; // 引入 API 请求方�
 export default {
   data() {
     return {
-      searchText: '',
+      searchKeyword: '',
       currentTag: 'all',
       isRefreshing: false,
       tags: [
@@ -133,11 +144,16 @@ export default {
         { id: 'property', name: '房产法律' }
       ],
       leftList: [],
-      rightList: []
+      rightList: [],
+      communityList: [], // 社区内容列表
+      filteredCommunityList: [], // 过滤后的社区内容列表
+      RawData:[],
+      isModalVisible: false // 控制模态框的显示
     }
   },
   mounted() {
     this.fetchPosts(); // 组件挂载时获取帖子
+    // this.fetchCommunityList(); // 获取社区内容
   },
   methods: {
     async fetchPosts() {
@@ -164,7 +180,12 @@ export default {
             comments: commentsCount,
             isLiked: false
           };
-        }));
+          
+        }
+      )
+      
+    );
+        this.RawData=posts
 
         this.leftList = posts.filter((_, index) => index % 2 === 0);
         this.rightList = posts.filter((_, index) => index % 2 !== 0);
@@ -172,7 +193,7 @@ export default {
         console.error('获取帖子失败:', error);
       }
     },
-        async fetchComments(postId) {
+    async fetchComments(postId) {
       try {
         const response = await apiRequest(`comments/post/${postId}`, 'get');
         return response
@@ -196,14 +217,42 @@ export default {
     navigateToDetail(id,comments) {
       uni.navigateTo({
         url: `/pages/community/post-detail?id=${id}&comments=${JSON.stringify(comments)}`
-        
       });
     },
     navigateToPublish() {
       uni.navigateTo({
-        url: '/pages/community/publish',
-        userInfo:userInfo
+        url: '/pages/community/publish'
       });
+    },
+    async fetchCommunityList() {
+      try {
+        const response = await apiRequest(`community/search/${this.searchKeyword}`, 'get'); // 获取社区内容
+        this.communityList = response; // 假设返回的内容是一个数组
+        this.filteredCommunityList = this.communityList; // 初始化过滤后的列表
+      } catch (error) {
+        console.error("获取社区内容失败", error);
+        uni.showToast({
+          title: '获取社区内容失败，请重试',
+          icon: 'none'
+        });
+      }
+    },
+    searchPosts() {
+      if (this.searchKeyword) {
+        console.log(this.searchKeyword)
+        this.filteredCommunityList = this.RawData.filter(item => 
+          item.title.includes(this.searchKeyword)|| item.content.includes(this.searchKeyword),// 根据标题or 内容进行搜索
+        );
+      } else {
+        this.filteredCommunityList = this.communityList; // 如果没有搜索关键词，显示所有内容
+      }
+      this.showModal(); // 显示模态框
+    },
+    showModal() {
+      this.isModalVisible = true; // 显示模态框
+    },
+    closeModal() {
+      this.isModalVisible = false; // 隐藏模态框
     }
   }
 }
@@ -217,21 +266,42 @@ export default {
 }
 
 .search-bar {
+  display: flex;
+  align-items: center;
   padding: 20rpx;
   background: #fff;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
+  border-radius: 30rpx;
+  width: 95%;
 }
 
 .search-bar input {
   background: #f5f5f5;
-  padding: 15rpx 30rpx;
-  border-radius: 30rpx;
+  /* padding: 15rpx 30rpx;
+  border-radius: 30rpx; */
   font-size: 28rpx;
+  flex: 1;
+  border: none;
+  outline: none;
+  min-width: 0;
+  height: 60rpx; /* 统一高度 */
 }
+
+.search-bar button {
+  /* margin-left: 10rpx;
+  padding: 15rpx 30rpx; */
+  background-color: #007AFF;
+  color: #fff;
+  border: none;
+  border-radius: 30rpx;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  height: 60rpx; /* 统一高度 */
+  flex-shrink: 0; /* 防止按钮缩小 */
+}
+
 
 .topic-tags {
   background: #fff;
@@ -260,7 +330,7 @@ export default {
 }
 
 .content-list {
-  margin-top: 180rpx;
+  margin-top: 10rpx;
   height: calc(100vh - 180rpx);
 }
 
@@ -390,5 +460,58 @@ export default {
 .float-btn .add-icon {
   width: 50rpx;
   height: 50rpx;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 20rpx;
+  border-radius: 10rpx;
+  width: 80%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* 添加阴影效果 */
+}
+
+.modal-title {
+  font-size: 28rpx;
+  font-weight: bold;
+}
+
+.modal-description {
+  font-size: 24rpx;
+  margin-top: 10rpx;
+}
+
+.modal button {
+  margin-top: 20rpx;
+  padding: 10rpx 20rpx;
+  background-color: #007AFF;
+  color: #fff;
+  border: none;
+  border-radius: 5rpx;
+  cursor: pointer;
+}
+.modal button:hover {
+  background-color: #0056b3;
+}
+
+.modal-item {
+  display: block;
+  padding: 10rpx;
+  color: #007AFF;
+  cursor: pointer;
+}
+.modal-item:hover {
+  text-decoration: underline; /* 添加悬停效果 */
 }
 </style> 

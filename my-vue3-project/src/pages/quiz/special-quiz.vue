@@ -1,56 +1,77 @@
 <template>
-  <view class="quiz-container">
-    <view class="question" v-if="currentQuestion">
-      <text class="question-text">{{ currentQuestion.questionText }}</text>
-      <view class="options">
-        <view 
-          class="option" 
-          :class="{ selected: selectedOption === 'A' }" 
-          @click="selectOption('A')"
-        >{{ currentQuestion.optionA }}</view>
-        <view 
-          class="option" 
-          :class="{ selected: selectedOption === 'B' }" 
-          @click="selectOption('B')"
-        >{{ currentQuestion.optionB }}</view>
-        <view 
-          class="option" 
-          :class="{ selected: selectedOption === 'C' }" 
-          @click="selectOption('C')"
-        >{{ currentQuestion.optionC }}</view>
-        <view 
-          class="option" 
-          :class="{ selected: selectedOption === 'D' }" 
-          @click="selectOption('D')"
-        >{{ currentQuestion.optionD }}</view>
+  <view class="daily-quiz-container">
+    <view class="progress-container">
+      <image class="progress-icon" src="/static/progress-icon.png" mode="aspectFit" />
+      <text class="progress-text">专项进度: {{ currentQuestionIndex + 1 }} / {{ questions.length }}</text>
+    </view>
+    <view class="quiz-title">专项答题</view>
+    <view class="quiz-content">
+      <view class="question-item" v-if="currentQuestion">
+        <text class="question-text">{{ currentQuestionIndex + 1 }}. {{ currentQuestion.questionText }}</text>
+        <view class="options">
+          <view 
+            class="option" 
+            :class="{ correct: selectedOptions[currentQuestion.id] === 'A' && currentQuestion.correctOption === 'A', 
+                      wrong: selectedOptions[currentQuestion.id] === 'A' && currentQuestion.correctOption !== 'A', 
+                      selected: selectedOptions[currentQuestion.id] === 'A' }" 
+            @click="selectOption(currentQuestion.id, 'A')">
+            {{ currentQuestion.optionA }}
+          </view>
+          <view 
+            class="option" 
+            :class="{ correct: selectedOptions[currentQuestion.id] === 'B' && currentQuestion.correctOption === 'B', 
+                      wrong: selectedOptions[currentQuestion.id] === 'B' && currentQuestion.correctOption !== 'B', 
+                      selected: selectedOptions[currentQuestion.id] === 'B' }" 
+            @click="selectOption(currentQuestion.id, 'B')">
+            {{ currentQuestion.optionB }}
+          </view>
+          <view 
+            class="option" 
+            :class="{ correct: selectedOptions[currentQuestion.id] === 'C' && currentQuestion.correctOption === 'C', 
+                      wrong: selectedOptions[currentQuestion.id] === 'C' && currentQuestion.correctOption !== 'C', 
+                      selected: selectedOptions[currentQuestion.id] === 'C' }" 
+            @click="selectOption(currentQuestion.id, 'C')">
+            {{ currentQuestion.optionC }}
+          </view>
+          <view 
+            class="option" 
+            :class="{ correct: selectedOptions[currentQuestion.id] === 'D' && currentQuestion.correctOption === 'D', 
+                      wrong: selectedOptions[currentQuestion.id] === 'D' && currentQuestion.correctOption !== 'D', 
+                      selected: selectedOptions[currentQuestion.id] === 'D' }" 
+            @click="selectOption(currentQuestion.id, 'D')">
+            {{ currentQuestion.optionD }}
+          </view>
+        </view>
       </view>
     </view>
+    <button class="finish-btn" @click="submitAnswers" v-if="currentQuestionIndex === questions.length - 1">完成答题</button>
   </view>
 </template>
 
 <script>
-import { apiRequest } from '@/utils/api'; // 引入 API 请求方法
-
+import { apiRequest } from '@/utils/api';
 export default {
   data() {
     return {
-      currentQuestion: null, // 当前题目
-      categoryId: null, // 类别 ID
-      questionIndex: 0, // 当前题目的索引
-      questions: [], // 存储所有题目
-      selectedOption: null // 当前选中的选项
+      currentQuestionIndex: 0,
+      selectedOptions: {}, // 存储用户选择的选项
+      userAnswers: [], // 存储用户答题结果
+      questions: [] // 题目数据
+    };
+  },
+  computed: {
+    currentQuestion() {
+      return this.questions[this.currentQuestionIndex];
     }
   },
-  created() {
-    this.categoryId = this.$route.query.id; // 获取传入的类别 ID
-    this.fetchQuestions(); // 获取题库数据
+  onLoad(options) {
+    this.fetchQuestions(); // 获取专项题库数据
   },
   methods: {
     async fetchQuestions() {
       try {
-        const response = await apiRequest(`questions/category/${this.categoryId}`, 'get'); // 获取对应类型的题库
+        const response = await apiRequest(`questions/category/${this.$route.query.id}`, 'get'); // 获取专项题库
         this.questions = response; // 存储所有题目
-        this.loadNextQuestion(); // 加载第一道题目
       } catch (error) {
         console.error("获取题库失败", error);
         uni.showToast({
@@ -59,70 +80,120 @@ export default {
         });
       }
     },
-    loadNextQuestion() {
-      if (this.questionIndex < this.questions.length) {
-        this.currentQuestion = this.questions[this.questionIndex]; // 加载当前题目
-        this.selectedOption = null; // 重置选中状态
+    selectOption(questionId, selectedOption) {
+      // 记录用户选择
+      this.$set(this.selectedOptions, questionId, selectedOption);
+      const isCorrect = selectedOption === this.currentQuestion.correctOption ? 1 : 0;
+
+      // 存储答题记录
+      const answer = {
+        userId: uni.getStorageSync('userInfo')?.id || '', // 确保 userId 存在
+        questionId,
+        selectedOption,
+        isCorrect,
+        timestamp: new Date().toISOString()
+      };
+
+      // 检查是否已有记录，更新或新增
+      const existingIndex = this.userAnswers.findIndex(a => a.questionId === questionId);
+      if (existingIndex !== -1) {
+        this.$set(this.userAnswers, existingIndex, answer);
       } else {
-        uni.showToast({
-          title: '所有题目已完成！',
-          icon: 'success'
-        });
-        // 可以在这里跳转到结果页面或其他页面
+        this.userAnswers.push(answer);
+      }
+
+      // 2 秒后自动跳转下一题
+      if (this.currentQuestionIndex < this.questions.length - 1) {
+        this.currentQuestionIndex++;
       }
     },
-    selectOption(option) {
-      this.selectedOption = option; // 设置当前选中的选项
-      this.questionIndex++; // 增加题目索引
-      this.loadNextQuestion(); // 加载下一题
+    async submitAnswers() {
+      try {
+        const response = await apiRequest('/userAnswers/list', 'POST', this.userAnswers);
+  
+        if (response) {
+          uni.showToast({ title: '提交成功', icon: 'success' });
+        }
+      } catch (error) {
+        console.error('提交答案出错:', error);
+        uni.showToast({ title: '提交失败', icon: 'none' });
+      }
     }
   }
-}
+};
 </script>
 
 <style>
-.quiz-container {
+.daily-quiz-container {
   padding: 30rpx;
   background-color: #f5f5f5;
   min-height: 100vh;
 }
-
-.question {
-  margin-bottom: 40rpx;
-  padding: 20rpx; /* 添加内边距 */
-  background-color: #fff; /* 背景颜色 */
-  border-radius: 12rpx; /* 圆角 */
-  box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.1); /* 阴影效果 */
-}
-
-.question-text {
-  font-size: 28rpx;
-  color: #333;
+.progress-container {
+  display: flex;
+  align-items: center;
   margin-bottom: 20rpx;
 }
-
+.progress-icon {
+  width: 40rpx;
+  height: 40rpx;
+  margin-right: 10rpx;
+}
+.progress-text {
+  font-size: 28rpx;
+  color: #333;
+}
+.quiz-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  margin-bottom: 20rpx;
+}
+.quiz-content {
+  margin-top: 20rpx;
+}
+.question-item {
+  margin-bottom: 20rpx;
+  padding: 20rpx;
+  background-color: #fff;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.1);
+}
+.question-text {
+  font-size: 28rpx;
+  margin-bottom: 10rpx;
+}
 .options {
   display: flex;
   flex-direction: column;
 }
-
 .option {
-  background-color: #f0f0f0; /* 默认背景颜色 */
-  color: #333; /* 默认文字颜色 */
+  background-color: #f0f0f0;
+  color: #333;
   border-radius: 12rpx;
-  padding: 20rpx;
+  padding: 15rpx;
   margin-bottom: 10rpx;
+  text-align: center;
+  transition: background-color 0.3s;
   cursor: pointer;
-  text-align: center; /* 文字居中 */
-  transition: background-color 0.3s; /* 添加过渡效果 */
 }
-
+.option.correct {
+  background-color: #28a745;
+  color: #fff;
+}
+.option.wrong {
+  background-color: #dc3545;
+  color: #fff;
+}
 .option.selected {
-  background-color: #007AFF; /* 选中时的背景颜色 */
-  color: #fff; /* 选中时的文字颜色 */
+  opacity: 0.5;
 }
-
-.option:hover {
-  background-color: #e0e0e0; /* 悬停时的背景颜色 */
+.finish-btn {
+  width: 100%;
+  height: 50rpx;
+  background-color: #28a745;
+  color: #fff;
+  border-radius: 25rpx;
+  font-size: 28rpx;
+  margin-top: 20rpx;
 }
 </style> 
