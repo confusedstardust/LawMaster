@@ -2,8 +2,10 @@
   <view class="community-container">
     <!-- 搜索栏 -->
     <view class="search-bar">
-      <input type="text" placeholder="搜索法律知识、新闻资讯" v-model="searchKeyword" />
-      <uni-icons @click="searchPosts" type="search" size="30" color="#007AFF"></uni-icons>
+      <!-- <input type="text" placeholder="搜索法律知识、新闻资讯" v-model="searchKeyword" /> -->
+      <!-- <uni-icons @click="searchPosts" type="search" size="30" color="#007AFF"></uni-icons> -->
+      <uni-easyinput prefixIcon="search" v-model="searchKeyword" placeholder="搜索帖子" @iconClick="searchPosts">
+			</uni-easyinput>
     </view>
  <!-- 话题分类标签 -->
  <!-- <view 

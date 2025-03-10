@@ -36,9 +36,14 @@
           v-model="loginForm.password" 
           placeholder="请输入密码"
         />
+        
+      </view>
+      <view class="forgot-password" >
+        <!-- <text class="iconfont icon-eye"></text> -->
+        <uni-data-checkbox v-model="radioval" :localdata="selectedRole" @change="handleRoleChange"></uni-data-checkbox>
       </view>
       <view class="forgot-password" @click="forgotPassword">忘记密码？</view>
-      <button class="submit-btn" @click="handleLogin">登录</button>
+      <button class="primary" @click="handleLogin">登录</button>
     </view>
 
     <!-- 注册表单 -->
@@ -110,7 +115,15 @@ export default {
         confirmPassword: ''
       },
       countdown: 60,
-      isCountingDown: false
+      isCountingDown: false,
+      selectedRole: [{
+					text: '用户',
+					value: 0
+				}, {
+					text: '管理员',
+					value: 1
+				}],
+        radioval: 0
     }
   },
   computed: {
@@ -119,6 +132,10 @@ export default {
     }
   },
   methods: {
+    handleRoleChange(value) {
+      console.log(value.detail.value);
+      this.radioval = value.detail.value
+    },
     async handleLogin() {
       if (!this.loginForm.username || !this.loginForm.password) {
         uni.showToast({
@@ -158,13 +175,17 @@ export default {
             icon: 'success',
             duration: 1500
           });
-          
-          // 延迟跳转到首页
-          setTimeout(() => {
+          // 当用户在单选框选择了管理员时，跳转到管理员界面
+          if(response.role == "admin" && this.radioval==1){
+            uni.reLaunch({
+              url: '/pages/admin/dashboard'
+            });
+          }else{
             uni.reLaunch({
               url: '/pages/index/index'
             });
-          }, 1500);
+          }
+          
         }else{
           uni.showToast({
             title: '用户名或密码错误',
@@ -173,6 +194,7 @@ export default {
           });
         }
       } catch (error) {
+        console.error("登录失败", error);
         uni.showToast({
           title: '登录失败，请重试',
           icon: 'none'

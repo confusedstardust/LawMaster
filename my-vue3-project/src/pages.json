@@ -6,11 +6,18 @@
 		}
 	},
 	"pages": [
-		
+
 		{
 			"path": "pages/login/login",
 			"style": {
 				"navigationBarTitleText": "登录",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/admin/dashboard",
+			"style": {
+				"navigationBarTitleText": "管理系统",
 				"navigationStyle": "custom"
 			}
 		},

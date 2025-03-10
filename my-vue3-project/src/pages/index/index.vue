@@ -2,8 +2,10 @@
   <view class="container">
     <!-- 搜索栏 -->
     <view class="search-bar">
-      <input type="text" placeholder="搜索法律知识、新闻资讯" v-model="searchKeyword" />
-      <uni-icons @click="searchArticles" type="search" size="30" color="#007AFF"></uni-icons>
+      <!-- <input type="text" placeholder="搜索法律知识、新闻资讯" v-model="searchKeyword" />
+      <uni-icons @click="searchArticles" type="search" size="30" color="#007AFF"></uni-icons> -->
+      <uni-easyinput prefixIcon="search" v-model="searchKeyword" placeholder="搜索法律知识、新闻资讯" @iconClick="searchArticles">
+			</uni-easyinput>
       <!-- <button @click="searchArticles">搜索</button> -->
     </view>
     
