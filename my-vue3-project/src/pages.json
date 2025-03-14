@@ -17,8 +17,31 @@
 		{
 			"path": "pages/admin/dashboard",
 			"style": {
-				"navigationBarTitleText": "管理系统",
-				"navigationStyle": "custom"
+				"navigationBarTitleText": "Dashboard"
+			}
+		},
+		{
+			"path": "pages/admin/postManagement",
+			"style": {
+				"navigationBarTitleText": "帖子管理"
+			}
+		},
+		{
+			"path": "pages/admin/userManagement",
+			"style": {
+				"navigationBarTitleText": "用户管理"
+			}
+		},
+		{
+			"path": "pages/admin/questionBankManagement",
+			"style": {
+				"navigationBarTitleText": "题库管理"
+			}
+		},
+		{
+			"path": "pages/admin/newsManagement",
+			"style": {
+				"navigationBarTitleText": "新闻/知识管理"
 			}
 		},
 		{

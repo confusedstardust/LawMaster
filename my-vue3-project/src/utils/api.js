@@ -73,6 +73,22 @@ export const getUserInfoById = async (userId) => {
   }
 };
 
+export const formatDate= (dateString)=> {
+  // 预处理字符串，去掉最后的 " 00:00"
+  const cleanedDateString = dateString.replace(" 00:00", "");
+  
+  // 解析成 Date 对象
+  const date = new Date(cleanedDateString);
+  
+  // 格式化为 "YYYY-MM-DD"
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0"); // 月份从 0 开始，需要 +1
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+  }
+
+
 const http = axios.create({
   baseURL: 'http://localhost:8080',
   timeout: 1000,

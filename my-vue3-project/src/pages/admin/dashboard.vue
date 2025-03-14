@@ -6,28 +6,28 @@
 				<uni-drawer ref="showLeft" mode="left" :width="220" @change="change($event,'showLeft')">
 					<view class="close">
 						<!-- <button @click="closeDrawer('showLeft')"><text class="word-btn-white">关闭Drawer</text></button> -->
-            <uni-list-item title="帖子管理" note="列表描述信息" link>
+            <uni-list-item title="帖子管理" @click="navigateTo('postManagement')" note="列表描述信息" link>
                 <template v-slot:footer>
                   <uni-icons type="pyq" size="30"></uni-icons>
                 </template>
           </uni-list-item>
 
-          <uni-list-item title="用户管理" note="列表描述信息" link>
+          <uni-list-item @click="navigateTo('userManagement')" title="用户管理"  note="列表描述信息" link >
                 <template v-slot:footer>
-                  <uni-icons type="contact" size="30"></uni-icons>
+                  <uni-icons type="contact" size="30" ></uni-icons>
                   <!-- <image class="slot-image" src="/static/logo.png" mode="widthFix"></image> -->
                 </template>
           </uni-list-item>
 
 
-          <uni-list-item title="题库管理" note="列表描述信息" link>
+          <uni-list-item title="题库管理" @click="navigateTo('questionBankManagement')" note="列表描述信息" link>
                 <template v-slot:footer>
                   <uni-icons type="compose" size="30"></uni-icons>
                   <!-- <image class="slot-image" src="/static/logo.png" mode="widthFix"></image> -->
                 </template>
           </uni-list-item>
 
-          <uni-list-item title="新闻/知识管理" note="列表描述信息" link>
+          <uni-list-item title="新闻/知识管理" @click="navigateTo('newsManagement')" note="列表描述信息" link>
                 <template v-slot:footer>
                   <uni-icons type="wallet-filled" size="30"></uni-icons>
                   <!-- <image class="slot-image" src="/static/logo.png" mode="widthFix"></image> -->
@@ -230,6 +230,11 @@ import { apiRequest } from '@/utils/api.js';
   }
 }
 ,
+			navigateTo(page) {
+				uni.navigateTo({
+					url: `/pages/admin/${page}`
+				});
+			}
 		},
 		onNavigationBarButtonTap(e) {
 			if (this.showLeft) {
@@ -271,11 +276,6 @@ import { apiRequest } from '@/utils/api.js';
   width: 100%;
 }
 
-	.example-body {
-		/* #ifndef APP-NVUE */
-		// display: block;
-		/* #endif */
-	}
 
 	.grid-dynamic-box {
 		margin-bottom: 15px;
