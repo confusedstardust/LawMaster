@@ -103,16 +103,16 @@ export default {
       try {
         switch (this.Typevalue) {
           case 1: // 用户ID
-            apiUrl = `http://localhost:8080/users/${this.searchQuery}`;
+            apiUrl = `users/${this.searchQuery}`;
             break;
           case 2: // 用户名
-            apiUrl = `http://localhost:8080/users/username/${this.searchQuery}`;
+            apiUrl = `users/username/${this.searchQuery}`;
             break;
           case 3: // 用户类型
-            apiUrl = `http://localhost:8080/users/role/${this.searchQuery}`;
+            apiUrl = `users/role/${this.searchQuery}`;
             break;
           default:
-            apiUrl = `http://localhost:8080/users/allusers`;
+            apiUrl = `users/allusers`;
         }
 
         const response = await apiRequest(apiUrl, 'get');

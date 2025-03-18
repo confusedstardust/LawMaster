@@ -33,6 +33,13 @@
                   <!-- <image class="slot-image" src="/static/logo.png" mode="widthFix"></image> -->
                 </template>
           </uni-list-item>
+
+		  <uni-list-item title="登出" @click="handleLogout" note="列表描述信息" link>
+                <template v-slot:footer>
+                  <uni-icons type="undo-filled" size="30"></uni-icons>
+                  <!-- <image class="slot-image" src="/static/logo.png" mode="widthFix"></image> -->
+                </template>
+          </uni-list-item>
 					
 
           </view>
@@ -135,7 +142,7 @@ import { apiRequest } from '@/utils/api.js';
 			add() {
 				if (this.dynamicList.length < 9) {
 					this.dynamicList.push({
-						url: `/static/c${this.dynamicList.length+1}.png`,
+						url:` /static/c${this.dynamicList.length+1}.png`,
 						text: `Grid ${this.dynamicList.length+1}`,
 						color: this.dynamicList.length % 2 === 0 ? '#f5f5f5' : "#fff"
 					})
@@ -234,7 +241,25 @@ import { apiRequest } from '@/utils/api.js';
 				uni.navigateTo({
 					url: `/pages/admin/${page}`
 				});
-			}
+			},
+	  handleLogout() {
+		// 清除本地存储中的用户信息
+		localStorage.removeItem('userToken');
+    	localStorage.removeItem('userInfo');
+      uni.showModal({
+        title: '提示',
+        content: '确定要退出登录吗？',
+        success: (res) => {
+          if (res.confirm) {
+            uni.removeStorageSync('token')
+            uni.removeStorageSync('userInfo')
+            uni.reLaunch({
+              url: '/pages/login/login'
+            })
+          }
+        }
+      })
+    }
 		},
 		onNavigationBarButtonTap(e) {
 			if (this.showLeft) {
@@ -306,7 +331,7 @@ import { apiRequest } from '@/utils/api.js';
 	}
 
 	.grid-dot {
-		position: absolute;
+		// position: absolute;
 		top: 5px;
 		right: 15px;
 	}
@@ -338,4 +363,3 @@ import { apiRequest } from '@/utils/api.js';
 
 	/* #endif */
 </style>
-

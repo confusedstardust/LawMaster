@@ -98,8 +98,20 @@ export default {
   methods: {
     async fetchQuestions() {
       this.loading = true;
+      let apiUrl = '';
       try {
-        const response = await apiRequest(`questions/all`, 'get'); // 获取所有题目
+        switch (this.Typevalue) {
+          case 1: // 题目ID
+            apiUrl = `questions/${this.searchQuery}?ids=${this.searchQuery}`;
+            break;
+          case 2: // 题目内容
+            apiUrl = `questions/search/${this.searchQuery}`;
+            break;
+          default:
+            apiUrl = `questions/all`;
+        }
+
+        const response = await apiRequest(apiUrl, 'get');
         this.questionsData = response.map(question => ({
           id: question.id,
           title: question.questionText,
@@ -107,7 +119,7 @@ export default {
         }));
         const categoryArray=await apiRequest('categories/all','get');
         this.categoryList=categoryArray
-        this.filteredQuestions = [...this.questionsData]; // 默认显示所有题目
+        this.filteredQuestions = [...this.questionsData];
       } catch (error) {
         console.error('获取题目失败:', error);
       } finally {
@@ -123,10 +135,7 @@ export default {
       return dateString.split(" ")[0];
     },
     filterQuestions() {
-      this.filteredQuestions = this.questionsData.filter(question =>
-        question.title.includes(this.searchQuery) || question.type.includes(this.searchQuery)
-      );
-      this.currentPage = 1;
+      this.fetchQuestions();
     },
     handlePageChange(event) {
       this.currentPage = event.current;

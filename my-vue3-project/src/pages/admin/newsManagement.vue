@@ -78,8 +78,7 @@ export default {
       categoryList:[],
       range: [
         { value: 1, text: "新闻ID" },
-        { value: 2, text: "标题" },
-        { value: 3, text: "作者" }
+        { value: 2, text: "内容" }
       ],
       selectedNews: {}, // 存储选中的新闻
     };
@@ -97,43 +96,44 @@ export default {
   methods: {
     async fetchNews() {
       this.loading = true;
+      let apiUrl = '';
       try {
-        const response = await apiRequest(`articles/all`, 'get'); // 获取所有新闻
-        this.newsData = response.map(newsItem => ({
-          id: newsItem.id,
-          title: newsItem.title,
-          content: newsItem.content,
-          categoryId: newsItem.categoryId,
-          createdAt: newsItem.createdAt
-        }));
+        switch (this.Typevalue) {
+          case 1: // 新闻ID
+            apiUrl = `articles/${this.searchQuery}`;
+            break;
+          case 2: // 内容
+            apiUrl = `articles/search/${this.searchQuery}`;
+            break;
+          default:
+            apiUrl = `articles/all`;
+        }
 
-        const categoryResponse=await apiRequest('categories/all','get');
-        this.categoryList=categoryResponse;
-        this.filteredNews = [...this.newsData]; // 默认显示所有新闻
+        const response = await apiRequest(apiUrl, 'get');
+        this.newsData = Array.isArray(response) ? response : [response];
+        this.filteredNews = [...this.newsData];
       } catch (error) {
         console.error('获取新闻失败:', error);
       } finally {
         this.loading = false;
       }
-    },formatDate(dateString) {
-    // 预处理字符串，去掉最后的 " 00:00"
-    const cleanedDateString = dateString.replace(" 00:00", "");
-    
-    // 解析成 Date 对象
-    const date = new Date(cleanedDateString);
-    
-    // 格式化为 "YYYY-MM-DD"
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0"); // 月份从 0 开始，需要 +1
-    const day = String(date.getDate()).padStart(2, "0");
+    },
+    formatDate(dateString) {
+      // 预处理字符串，去掉最后的 " 00:00"
+      const cleanedDateString = dateString.replace(" 00:00", "");
+      
+      // 解析成 Date 对象
+      const date = new Date(cleanedDateString);
+      
+      // 格式化为 "YYYY-MM-DD"
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0"); // 月份从 0 开始，需要 +1
+      const day = String(date.getDate()).padStart(2, "0");
 
-    return `${year}-${month}-${day}`;
+      return `${year}-${month}-${day}`;
     },
     filterNews() {
-      this.filteredNews = this.newsData.filter(newsItem =>
-        newsItem.title.includes(this.searchQuery) || newsItem.author.includes(this.searchQuery)
-      );
-      this.currentPage = 1;
+      this.fetchNews();
     },
     handlePageChange(event) {
       this.currentPage = event.current;
