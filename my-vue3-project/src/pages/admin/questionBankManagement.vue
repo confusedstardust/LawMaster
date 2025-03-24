@@ -2,7 +2,7 @@
   <view class="question-bank-management">
     <uni-card title="题库管理" is-full>
       
-      <!-- 🔹 搜索框 -->
+      <!-- 搜索框 -->
       <view class="search-bar">
         <uni-data-select class="uni-px-5"
           v-model="Typevalue"
@@ -14,7 +14,7 @@
         <uni-easyinput class="uni-mt-5" suffixIcon="search" v-model="searchQuery" @iconClick="filterQuestions"></uni-easyinput>
       </view>
 
-      <!-- 🔹 题库列表 -->
+      <!-- 题库列表 -->
       <uni-table ref="table" class="table" :loading="loading" border stripe emptyText="暂无更多数据">
         <uni-tr>
           <uni-th width="70" align="left">ID</uni-th>
@@ -28,7 +28,7 @@
         </uni-tr>
       </uni-table>
 
-      <!-- 🔹 分页组件 -->
+      <!-- 分页组件 -->
       <uni-pagination 
         :total="filteredQuestions.length" 
         :pageSize="pageSize" 
@@ -37,27 +37,142 @@
       />
     </uni-card>
 
-    <!-- 🔹 题目详情弹出框 -->
+    <!-- 题目详情弹出框 -->
     <uni-popup ref="popup" type="center">
       <view class="popup-container">
         
-        <!-- 🔹 标题 -->
+        <!-- 标题 -->
         <view class="popup-header">
           <text class="popup-title">{{ selectedQuestion.title }}</text>
         </view>
 
-        <!-- 🔹 内容（固定高度 + 滚动条） -->
+        <!-- 内容（固定高度 + 滚动条） -->
         <view class="popup-body">
-          <text class="popup-content">题目类型：{{ getCategoryById(selectedQuestion.categoryId) }}</text>
-          <text class="popup-content">创建日期：{{ formatDate(selectedQuestion.creationDate) }}</text>
-        </view>
+          <view class="detail-item">
+            <text class="detail-label">题目类型：</text>
+            <uni-data-select
+              v-model="selectedQuestion.categoryId"
+              :localdata="categoryList.map(item => ({
+                value: item.id,
+                text: item.name
+              }))"
+              placeholder="请选择题目类型"
+            />
+          </view>
 
-        <!-- 🔹 操作按钮 -->
+          <view class="detail-item">
+            <text class="detail-label">选项A：</text>
+            <uni-easyinput
+              v-model="selectedQuestion.optionA"
+              placeholder="请输入选项A"
+              trim="both"
+            />
+          </view>
+
+          <view class="detail-item">
+            <text class="detail-label">选项B：</text>
+            <uni-easyinput
+              v-model="selectedQuestion.optionB"
+              placeholder="请输入选项B"
+              trim="both"
+            />
+          </view>
+
+          <view class="detail-item">
+            <text class="detail-label">选项C：</text>
+            <uni-easyinput
+              v-model="selectedQuestion.optionC"
+              placeholder="请输入选项C"
+              trim="both"
+            />
+          </view>
+
+          <view class="detail-item">
+            <text class="detail-label">选项D：</text>
+            <uni-easyinput
+              v-model="selectedQuestion.optionD"
+              placeholder="请输入选项D"
+              trim="both"
+            />
+          </view>
+
+          <view class="detail-item">
+            <text class="detail-label">正确选项：</text>
+            <uni-data-select
+              v-model="selectedQuestion.correctOption"
+              :localdata="answerOptions"
+              placeholder="请选择正确选项"
+            />
+          </view>
+        </view>
+        <!-- 操作按钮 -->
         <view class="popup-actions">
           <button class="popup-btn delete" @click="handleDeleteQuestion">删除题目</button>
           <button class="popup-btn edit" @click="handleEditQuestion">编辑题目</button>
         </view>
 
+      </view>
+    </uni-popup>
+
+    <!-- 新增按钮 -->
+    <view class="add-button" @click="showAddForm">
+      <uni-icons type="plusempty" size="24" color="#fff"></uni-icons>
+    </view>
+
+    <!-- 新增表单弹窗 -->
+    <uni-popup ref="addFormPopup" type="center">
+      <view class="form-container">
+        <view class="form-header">
+          <text class="form-title">新增题目</text>
+        </view>
+        
+        <view class="form-body">
+          <uni-forms ref="form" :model="formData">
+            <uni-forms-item label="题目" required>
+              <uni-easyinput v-model="formData.title" placeholder="请输入题目"/>
+            </uni-forms-item>
+            
+            <uni-forms-item label="选项A" required>
+              <uni-easyinput v-model="formData.optionA" placeholder="请输入选项A"/>
+            </uni-forms-item>
+
+            <uni-forms-item label="选项B" required>
+              <uni-easyinput v-model="formData.optionB" placeholder="请输入选项B"/>
+            </uni-forms-item>
+
+            <uni-forms-item label="选项C" required>
+              <uni-easyinput v-model="formData.optionC" placeholder="请输入选项C"/>
+            </uni-forms-item>
+
+            <uni-forms-item label="选项D" required>
+              <uni-easyinput v-model="formData.optionD" placeholder="请输入选项D"/>
+            </uni-forms-item>
+
+            <uni-forms-item label="题目类型" required>
+              <uni-data-select
+                v-model="formData.categoryId"
+                :localdata="categoryList.map(item => ({
+                  value: item.id,
+                  text: item.name
+                }))"
+                placeholder="请选择题目类型"
+              />
+            </uni-forms-item>
+
+            <uni-forms-item label="正确选项" required>
+              <uni-data-select
+                v-model="formData.correctAnswer"
+                :localdata="answerOptions"
+                placeholder="请选择正确选项"
+              />
+            </uni-forms-item>
+          </uni-forms>
+        </view>
+
+        <view class="form-actions">
+          <button class="form-btn cancel" @click="closeAddForm">取消</button>
+          <button class="form-btn submit" @click="submitForm">提交</button>
+        </view>
       </view>
     </uni-popup>
   </view>
@@ -83,6 +198,21 @@ export default {
         { value: 3, text: "题目类型" }
       ],
       selectedQuestion: {}, // 存储选中的题目
+      formData: {
+        title: '',
+        optionA: '',
+        optionB: '',
+        optionC: '',
+        optionD: '',
+        correctAnswer: '',
+        categoryId: ''
+      },
+      answerOptions: [
+        { value: 'A', text: 'A' },
+        { value: 'B', text: 'B' },
+        { value: 'C', text: 'C' },
+        { value: 'D', text: 'D' }
+      ]
     };
   },
   computed: {
@@ -116,6 +246,11 @@ export default {
           id: question.id,
           title: question.questionText,
           categoryId: question.categoryId,
+          optionA: question.optionA,
+          optionB: question.optionB,
+          optionC: question.optionC,
+          optionD: question.optionD,
+          correctOption: question.correctOption
         }));
         const categoryArray=await apiRequest('categories/all','get');
         this.categoryList=categoryArray
@@ -147,7 +282,7 @@ export default {
     async handleDeleteQuestion() {
       if (!this.selectedQuestion.id) return;
       try {
-        await apiRequest(`questions/delete/${this.selectedQuestion.id}`, 'DELETE');
+        await apiRequest(`questions/delete/${this.selectedQuestion.id}`, 'post');
         this.questionsData = this.questionsData.filter(question => question.id !== this.selectedQuestion.id);
         this.filteredQuestions = [...this.questionsData];
         uni.showToast({ title: "删除成功", icon: "success" });
@@ -160,16 +295,71 @@ export default {
     async handleEditQuestion() {
       if (!this.selectedQuestion.id) return;
       try {
-        // 这里可以跳转到编辑题目的页面
-        uni.navigateTo({
-          url: `/pages/editQuestion/editQuestion?id=${this.selectedQuestion.id}`
-        });
+        const response=await apiRequest(`/questions/edit`, 'post',this.selectedQuestion);
+        if(response){
+          uni.showToast({ title: "编辑成功", icon: "success" });
+          this.$refs.popup.close();
+        }
       } catch (error) {
         console.error("编辑题目失败:", error);
         uni.showToast({ title: "操作失败", icon: "none" });
       }
     },
-  },
+    showAddForm() {
+      this.$refs.addFormPopup.open();
+    },
+    
+    closeAddForm() {
+      this.$refs.addFormPopup.close();
+      this.formData = {
+        title: '',
+        optionA: '',
+        optionB: '',
+        optionC: '',
+        optionD: '',
+        correctAnswer: '',
+        categoryId: ''
+      };
+    },
+    
+    async submitForm() {
+      if (!this.formData.title || !this.formData.optionA || !this.formData.optionB || 
+          !this.formData.optionC || !this.formData.optionD || !this.formData.correctAnswer ||
+          !this.formData.categoryId) {
+        uni.showToast({
+          title: '请填写完整信息',
+          icon: 'none'
+        });
+        return;
+      }
+      
+      try {
+        const questionData = {
+          questionText: this.formData.title,
+          optionA: this.formData.optionA,
+            optionB: this.formData.optionB,
+            optionC: this.formData.optionC,
+            optionD: this.formData.optionD,
+          correctOption: this.formData.correctAnswer,
+          categoryId: this.formData.categoryId
+        };
+        
+        await apiRequest('questions', 'POST', questionData);
+        uni.showToast({
+          title: '添加成功',
+          icon: 'success'
+        });
+        this.closeAddForm();
+        this.fetchQuestions();
+      } catch (error) {
+        console.error('添加失败:', error);
+        uni.showToast({
+          title: '添加失败',
+          icon: 'none'
+        });
+      }
+    }
+  }
 };
 </script>
 
@@ -187,66 +377,201 @@ export default {
   margin-top: 10px;
 }
 
-/* 🔹 弹出框样式 */
 .popup-container {
-  padding: 20px;
   background-color: #fff;
-  border-radius: 10px;
-  text-align: center;
-  width: 320px;
+  border-radius: 24rpx;
+  width: 600rpx;
+  min-height: 400rpx;
+  max-height: 800rpx;
+  padding: 30rpx;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Section 1: 标题 */
 .popup-header {
-  padding: 10px 0;
-  border-bottom: 1px solid #ddd;
+  margin-bottom: 20rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 2rpx solid #eee;
+  flex-shrink: 0;
 }
 
 .popup-title {
-  font-size: 18px;
-  font-weight: bold;
-  text-align: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
 }
 
-/* Section 2: 内容（固定高度 + 滚动条） */
 .popup-body {
-  max-height: 150px;
+  flex: 1;
   overflow-y: auto;
-  padding: 10px;
-  text-align: left;
+  padding: 0 20rpx;
 }
 
-.popup-content {
-  font-size: 14px;
-  color: #555;
-  line-height: 1.5;
-  display: block;
-  margin-bottom: 5px;
-}
-
-/* Section 3: 操作按钮 */
-.popup-actions {
+.detail-item {
+  margin-bottom: 24rpx;
   display: flex;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-top: 1px solid #ddd;
+  align-items: center;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background-color: #f8f9fa;
+}
+
+.detail-label {
+  width: 160rpx;
+  color: #666;
+  font-size: 28rpx;
+  flex-shrink: 0;
+}
+
+.detail-item :deep(.uni-easyinput__content),
+.detail-item :deep(.uni-data-select) {
+  flex: 1;
+  background-color: #fff;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.detail-item :deep(.uni-easyinput__content) {
+  min-height: 70rpx;
+  border: 2rpx solid #ddd;
+}
+
+.detail-item :deep(.uni-data-select) {
+  border: 2rpx solid #ddd;
+}
+
+.detail-item :deep(.uni-easyinput__content-input) {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.popup-actions {
+  margin-top: 30rpx;
+  display: flex;
+  justify-content: flex-end;
+  gap: 20rpx;
+  padding-top: 20rpx;
+  border-top: 2rpx solid #eee;
+  flex-shrink: 0;
 }
 
 .popup-btn {
-  padding: 10px;
-  font-size: 14px;
-  width: 45%;
-  border-radius: 5px;
-  cursor: pointer;
+  min-width: 160rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 36rpx;
+  font-size: 28rpx;
+  border: none;
+  transition: all 0.3s ease;
 }
 
-.delete {
-  background-color: #e74c3c;
-  color: white;
+.popup-btn.delete {
+  background-color: #ff4d4f;
+  color: #fff;
 }
 
-.edit {
-  background-color: #3498db;
-  color: white;
+.popup-btn.delete:active {
+  background-color: #cf1322;
+}
+
+.popup-btn.edit {
+  background-color: #2979ff;
+  color: #fff;
+}
+
+.popup-btn.edit:active {
+  background-color: #2567db;
+}
+
+.add-button {
+  position: fixed;
+  right: 30rpx;
+  bottom: 30rpx;
+  width: 100rpx;
+  height: 100rpx;
+  background-color: #2979ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+  z-index: 999;
+}
+
+.form-container {
+  background-color: #fff;
+  border-radius: 24rpx;
+  width: 80vw;
+  height: 70vh;
+  padding: 30rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-header {
+  margin-bottom: 20rpx;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.form-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.form-body {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 20rpx;
+}
+
+.form-body :deep(.uni-forms-item) {
+  margin-bottom: 16rpx;
+}
+
+.form-body::-webkit-scrollbar {
+  width: 6rpx;
+}
+
+.form-body::-webkit-scrollbar-thumb {
+  background-color: #ddd;
+  border-radius: 3rpx;
+}
+
+.form-actions {
+  margin-top: 20rpx;
+  display: flex;
+  justify-content: flex-end;
+  gap: 24rpx;
+  flex-shrink: 0;
+}
+
+.form-btn {
+  min-width: 160rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 36rpx;
+  font-size: 28rpx;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.form-btn.cancel {
+  background-color: #f5f5f5;
+  color: #666;
+}
+
+.form-btn.cancel:active {
+  background-color: #e8e8e8;
+}
+
+.form-btn.submit {
+  background-color: #2979ff;
+  color: #fff;
+}
+
+.form-btn.submit:active {
+  background-color: #2567db;
 }
 </style>

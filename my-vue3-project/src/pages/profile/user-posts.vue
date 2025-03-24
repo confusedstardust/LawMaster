@@ -20,6 +20,7 @@
           v-for="item in posts" 
           :key="item.id"
           @click="navigateToPost(item.id, item.comments)"
+          @longpress="confirmDelete(item.id)"
         >
           <image 
             class="post-image" 
@@ -117,6 +118,34 @@ export default {
       await new Promise(resolve => setTimeout(resolve, 1000));
       this.isRefreshing = false;
     },
+    confirmDelete(postId) {
+      uni.showModal({
+        title: '确认删除',
+        content: '您确定要删除这条帖子吗？',
+        success: async (res) => {
+          if (res.confirm) {
+            await this.deletePost(postId);
+          }
+        }
+      });
+    },
+    async deletePost(postId) {
+      try {
+        await apiRequest(`/posts/delete/${postId}`, 'post');
+        uni.showToast({
+          title: '删除成功',
+          icon: 'success'
+        });
+        // 从列表中移除已删除的帖子
+        this.posts = this.posts.filter(post => post.id !== postId);
+      } catch (error) {
+        console.error('删除失败', error);
+        uni.showToast({
+          title: '删除失败，请重试',
+          icon: 'none'
+        });
+      }
+    }
   }
 }
 </script>

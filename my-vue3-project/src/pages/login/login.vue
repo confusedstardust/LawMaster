@@ -1,8 +1,12 @@
 <template>
   <view class="login-container">
     <view class="logo-area">
-      <image src="/static/logo.png" mode="aspectFit" class="logo"></image>
-      <text class="app-name">法律学习平台</text>
+      <!-- <image src="/static/logo.png" mode="aspectFit" class="logo"></image> -->
+      <image src="/static/mainpic.jpg" mode="aspectFill" class="background-image"></image>
+      <view class="blur-overlay"></view>
+      <view class="welcome-text-1">Hello！</view>
+      
+      <view class="welcome-text">欢迎来到法治慧</view>
     </view>
 
     <!-- 切换登录/注册的标签页 -->
@@ -292,13 +296,15 @@ export default {
   padding: 40rpx;
   min-height: 100vh;
   background-color: #fff;
+  margin-top: 130px;
 }
 
 .logo-area {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 60rpx 0;
+  margin: 30rpx 0;
 }
 
 .logo {
@@ -306,11 +312,32 @@ export default {
   height: 160rpx;
 }
 
-.app-name {
-  margin-top: 20rpx;
-  font-size: 36rpx;
+.background-image {
+  width: 100%;
+  height: 350rpx;
+  object-fit: cover;
+  position: absolute;
+  bottom: -70rpx;
+}
+
+
+.welcome-text {
+  position: absolute;
+  bottom: -50rpx;
+  left: 20rpx;  
+  color: #0b0101;
+  font-size: 46rpx;
   font-weight: bold;
-  color: #333;
+  z-index: 2;
+}
+.welcome-text-1 {
+  position: absolute;
+  bottom: -5rpx;
+  left: 20rpx;  
+  color: #0b0101;
+  font-size: 46rpx;
+  font-weight: bold;
+  z-index: 2;
 }
 
 .tab-header {
@@ -440,5 +467,16 @@ export default {
 .social-item text {
   font-size: 40rpx;
   color: #333;
+}
+
+.primary {
+  background-color: #007AFF; /* 蓝色 */
+  color: #fff;
+  border-radius: 44rpx;
+  font-size: 32rpx;
+  margin-top: 40rpx;
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
 }
 </style> 

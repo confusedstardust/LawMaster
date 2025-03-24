@@ -27,7 +27,7 @@
                 </template>
           </uni-list-item>
 
-          <uni-list-item title="新闻/知识管理" @click="navigateTo('newsManagement')" note="列表描述信息" link>
+          <uni-list-item title="新闻/知识/案例管理" @click="navigateTo('newsManagement')" note="列表描述信息" link>
                 <template v-slot:footer>
                   <uni-icons type="wallet-filled" size="30"></uni-icons>
                   <!-- <image class="slot-image" src="/static/logo.png" mode="widthFix"></image> -->
@@ -64,71 +64,68 @@
 				</swiper-item>
 			</swiper>
 		</uni-section>
+
+		<uni-section title="应用指标" type="line" padding>
+		</uni-section>
+		<swiper class="swiper" :indicator-dots="true" style="height: 600rpx;">
+  <!-- **每周发帖数** -->
+  <swiper-item>
+    <uni-grid :column="1" :highlight="true" style="height: 100%;">
+      <view>
+        <canvas canvas-id="postChart" id="postChart" class="charts" @touchend="tap" />
+      </view>
+    </uni-grid>
+  </swiper-item>
+
+  <!-- **每周新增用户数** -->
+  <swiper-item>
+    <uni-grid :column="1" :highlight="true" style="height: 100%;">
+      <view>
+        <canvas canvas-id="userChart" id="userChart" class="charts" @touchend="tap" />
+      </view>
+    </uni-grid>
+  </swiper-item>
+
+    <!-- **新增分类问题数量的图表** -->
+	<swiper-item>
+    <uni-grid :column="1" :highlight="true" style="height: 100%;">
+      <view>
+        <canvas canvas-id="categoryChart" id="categoryChart" class="charts" @touchend="tap" />
+      </view>
+    </uni-grid>
+  </swiper-item>
+</swiper>
 </template>
 <script>
-import { apiRequest } from '@/utils/api.js';
-	export default {
-		components: {},
-		data() {
-			return {
-        showLeft: false,
-				dynamicList: [],
-				list: [{
-						url: '/static/c1.png',
-						text: '用户人数',
-						badge: this.userCount,
-						type: "primary"
-					},
-					{
-						url: '/static/c2.png',
-						text: '帖子总数',
-						badge: this.postCount,
-						type: "success"
-					},
-					{
-						url: '/static/c3.png',
-						text: '新闻/知识总数',
-						badge: this.questionBankCount,
-						type: "warning"
-					},
-					{
-						url: '/static/c4.png',
-						text: '题库总数',
-						badge: '',
-						type: "error"
-					},
-					{
-						url: '/static/c5.png',
-						text: '题库类型数'
-					},
-					{
-						url: '/static/c6.png',
-						text: '易错题排行'
-					},
-					{
-						url: '/static/c7.png',
-						text: '热帖排行'
-					},
-					{
-						url: '/static/c8.png',
-						text: '收藏最多'
-					},
-					{
-						url: '/static/c9.png',
-						text: '点赞最多'
-					}
-				],
-				userCount: 0,
-				postCount: 0,
-				newsCount: 0,
-				questionBankCount: 0,
-			}
-		},
-		created() {
-			this.fetchStatistics();
-		},
-		methods: {
-			change(e) {
+import { apiRequest } from "@/utils/api.js";
+import uCharts from "@qiun/ucharts/u-charts.js";
+
+var uChartsInstance = {};
+
+export default {
+  data() {
+    return {
+      cWidth: 750,
+      cHeight: 500,
+      list: [],
+      userCount: 0,
+      postCount: 0,
+      newsCount: 0,
+      questionBankCount: 0,
+	  categoryData: [],
+	  categoryList:[]
+    };
+  },
+  created() {
+    this.cWidth = uni.upx2px(750);
+    this.cHeight = uni.upx2px(500);
+    this.fetchStatistics();
+    this.fetchWeeklyPostData();
+    this.fetchWeeklyUserData();
+	this.fetchCategoryData();
+  },
+  methods: {
+	change(e) {
 				let {
 					index
 				} = e.detail
@@ -142,7 +139,7 @@ import { apiRequest } from '@/utils/api.js';
 			add() {
 				if (this.dynamicList.length < 9) {
 					this.dynamicList.push({
-						url:` /static/c${this.dynamicList.length+1}.png`,
+						url: `/static/c${this.dynamicList.length+1}.png`,
 						text: `Grid ${this.dynamicList.length+1}`,
 						color: this.dynamicList.length % 2 === 0 ? '#f5f5f5' : "#fff"
 					})
@@ -170,114 +167,139 @@ import { apiRequest } from '@/utils/api.js';
 				console.log((type === 'showLeft' ? '左窗口' : '右窗口') + (e ? '打开' : '关闭'));
 				this[type] = e
 			},
-      async fetchStatistics() {
-  try {
-    const userResponse = await apiRequest('users/allcount', 'get');
-    const postResponse = await apiRequest('posts', 'get');
-    const newsResponse = await apiRequest('articles/all', 'get');
-    const questionsResponse = await apiRequest('questions/all', 'get');
+			getCategoryById(id){
+      const categoryVal=this.categoryList.filter(item=>item.id==id)
+      console.log(categoryVal)
+      return categoryVal[0].name
+    },
+    async fetchStatistics() {
+      try {
+        const userResponse = await apiRequest("users/allcount", "get");
+        const postResponse = await apiRequest("posts", "get");
+        const newsResponse = await apiRequest("articles/all", "get");
+        const questionsResponse = await apiRequest("questions/all", "get");
 
-    // 更新数据
-    this.userCount = userResponse;
-    this.postCount = postResponse.length;
-    this.newsCount = newsResponse.length;
-    this.questionBankCount = questionsResponse.length;
-
-    console.log(this.questionBankCount, this.postCount, this.userCount, this.newsCount);
-
-    // **更新 list 数组**
-    this.list = [
-      {
-        url: '/static/c1.png',
-        text: '用户人数',
-        badge: this.userCount,
-        type: "primary"
-      },
-      {
-        url: '/static/c2.png',
-        text: '帖子总数',
-        badge: this.postCount,
-        type: "success"
-      },
-      {
-        url: '/static/c3.png',
-        text: '新闻/知识总数',
-        badge: this.newsCount,
-        type: "warning"
-      },
-      {
-        url: '/static/c4.png',
-        text: '题库总数',
-        badge: this.questionBankCount,
-        type: "error"
-      },
-      {
-        url: '/static/c5.png',
-        text: '题库类型数'
-      },
-      {
-        url: '/static/c6.png',
-        text: '易错题排行'
-      },
-      {
-        url: '/static/c7.png',
-        text: '热帖排行'
-      },
-      {
-        url: '/static/c8.png',
-        text: '收藏最多'
-      },
-      {
-        url: '/static/c9.png',
-        text: '点赞最多'
+        this.userCount = userResponse;
+        this.postCount = postResponse.length;
+        this.newsCount = newsResponse.length;
+        this.questionBankCount = questionsResponse.length;
+        this.list = [
+          { url: "/static/c1.png", text: "用户人数", badge: this.userCount, type: "primary" },
+          { url: "/static/c2.png", text: "帖子总数", badge: this.postCount, type: "success" },
+          { url: "/static/c3.png", text: "新闻/知识总数", badge: this.newsCount, type: "warning" },
+          { url: "/static/c4.png", text: "题库总数", badge: this.questionBankCount, type: "error" },
+		  { url: "/static/c4.png", text: "题库类型数", badge: this.categoryList.length, type: "error" },
+		  { url: "/static/c4.png", text: "易错题排行", badge: this.questionBankCount, type: "error" },
+		  { url: "/static/c4.png", text: "热帖排行", badge: this.questionBankCount, type: "error" },
+		  { url: "/static/c4.png", text: "收藏最多", badge: this.questionBankCount, type: "error" },
+		  { url: "/static/c4.png", text: "点赞最多", badge: this.questionBankCount, type: "error" },
+        ];
+      } catch (error) {
+        console.error("Error fetching statistics:", error);
       }
-    ];
-  } catch (error) {
-    console.error('Error fetching statistics:', error);
-  }
+    },async fetchCategoryData() {
+    try {
+      const response = await apiRequest("questions/countByCategory", "get");
+	  const categoryArray=await apiRequest('categories/all','get');
+    	this.categoryList=categoryArray
+      let categories = response.map(item => `${this.getCategoryById(item.category_id)}`);
+      let data = response.map(item => item.count);
+      this.drawCharts("categoryChart", categories, [{ name: "问题数", data }]);
+    } catch (error) {
+      console.error("获取分类问题数量失败:", error);
+    }
+  },
+	drawCategoryChart() {
+		const context = uni.createCanvasContext('categoryChart', this);
+		const categories = this.categoryData.map(item => `类别 ${item.category_id}`);
+		const counts = this.categoryData.map(item => item.count);
+
+		// 这里用简单的柱状图逻辑，你也可以使用 uCharts 或 ECharts
+		context.setFillStyle('blue');
+		counts.forEach((count, index) => {
+		const barHeight = count * 30; // 按比例放大
+		context.fillRect(50 + index * 100, 400 - barHeight, 50, barHeight);
+		});
+
+		context.draw();
+	},
+    async fetchWeeklyPostData() {
+      try {
+        const response = await apiRequest("posts/weekly", "get");
+        let categories = response.map(item => item.postDate.slice(5));
+        let data = response.map(item => item.postCount);
+        this.drawCharts("postChart", categories, [{ name: "每周发帖数", data }]);
+      } catch (error) {
+        console.error("获取发帖数据失败:", error);
+      }
+    },
+
+    async fetchWeeklyUserData() {
+      try {
+        const response = await apiRequest("users/weekly", "get");
+        let categories = response.map(item => item.userDate.slice(5));
+        let data = response.map(item => item.userCount);
+        this.drawCharts("userChart", categories, [{ name: "每周新增用户数", data }]);
+      } catch (error) {
+        console.error("获取用户数据失败:", error);
+      }
+    },
+	drawCharts(canvasId, categories, series) {
+  const ctx = uni.createCanvasContext(canvasId, this);
+  uChartsInstance[canvasId] = new uCharts({
+    type: "column",
+    context: ctx,
+    width: this.cWidth,
+    height: this.cHeight,
+    categories,
+    series,
+    animation: true,
+    background: "#FFFFFF",
+    padding: [20, 15, 15, 5], // ✅ 增加 padding，让图表不至于太贴边
+    xAxis: { 
+      disableGrid: true,
+      itemRotate: 0, // ✅ 文字角度，0 为水平，45° 适合长文本
+    },
+    yAxis: { 
+      data: [{ min: 0 }]
+    },
+    extra: { 
+      column: { 
+        type: "group",
+        width: 20,  // ✅ 设置柱子宽度（值越小柱子越细）
+        activeBgColor: "#FFA726", // ✅ 可选，柱子点击时的颜色
+        seriesGap: 5, // ✅ 让不同组之间的柱子有点间隔
+        categoryGap: 20, // ✅ 让整体分类间距增大，使柱子看起来不挤
+      }
+    }
+  });
 }
-,
-			navigateTo(page) {
-				uni.navigateTo({
-					url: `/pages/admin/${page}`
-				});
-			},
-	  handleLogout() {
-		// 清除本地存储中的用户信息
-		localStorage.removeItem('userToken');
-    	localStorage.removeItem('userInfo');
+,    
+
+    tap(e) {
+      uChartsInstance[e.target.id].touchLegend(e);
+      uChartsInstance[e.target.id].showToolTip(e);
+    },
+
+    navigateTo(page) {
+      uni.navigateTo({ url: `/pages/admin/${page}` });
+    },
+
+    handleLogout() {
       uni.showModal({
-        title: '提示',
-        content: '确定要退出登录吗？',
-        success: (res) => {
+        title: "提示",
+        content: "确定要退出登录吗？",
+        success: res => {
           if (res.confirm) {
-            uni.removeStorageSync('token')
-            uni.removeStorageSync('userInfo')
-            uni.reLaunch({
-              url: '/pages/login/login'
-            })
+            uni.removeStorageSync("token");
+            uni.removeStorageSync("userInfo");
+            uni.reLaunch({ url: "/pages/login/login" });
           }
         }
-      })
+      });
     }
-		},
-		onNavigationBarButtonTap(e) {
-			if (this.showLeft) {
-				this.$refs.showLeft.close()
-			} else {
-				this.$refs.showLeft.open()
-			}
-		},
-		// app端拦截返回事件 ，仅app端生效
-		onBackPress() {
-			if (this.showRight || this.showLeft) {
-				this.$refs.showLeft.close()
-				this.$refs.showRight.close()
-				return true
-			}
-		}
-      
-	}
+  }
+};
 </script>
 <style lang="scss">
 	.image {
@@ -360,6 +382,10 @@ import { apiRequest } from '@/utils/api.js';
 		width: 30px;
 		height: 30px;
 	}
+	.charts{
+    width: 750rpx;
+    height: 500rpx;
+  }
 
 	/* #endif */
 </style>

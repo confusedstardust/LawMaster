@@ -11,7 +11,7 @@
         <image class="avatar" :src="postDetail.userAvatar"></image>
         <view class="author-detail">
           <text class="nickname">{{ postDetail.username }}</text>
-          <text class="time">{{ postDetail.createdAt }}</text>
+          <text class="time">{{formatDate( postDetail.createdAt )}}</text>
         </view>
         <button class="follow-btn" @click="handleFollow">
           {{ postDetail.isFollowed ? '已关注' : '关注' }}
@@ -79,6 +79,7 @@
           class="comment-item" 
           v-for="comment in postDetail.comments" 
           :key="comment.id"
+          @longpress="confirmDeleteComment(comment.id,comment.userId)"
         >
           <image class="comment-avatar" :src="comment.userAvatar"></image>
           <view class="comment-content">
@@ -419,6 +420,41 @@ async loadComments() {
     const day = String(date.getDate()).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
+    },
+    confirmDeleteComment(commentId,userId) {
+      uni.showModal({
+        title: '确认删除',
+        content: '您确定要删除这条评论吗？',
+        success: async (res) => {
+          if (res.confirm) {
+            await this.deleteComment(commentId,userId);
+          }
+        }
+      });
+    },
+    async deleteComment(commentId,userId) {
+      try {
+        const res=await apiRequest(`comments/delete/${userId}/${commentId}`, 'POST');
+        if(res){
+          uni.showToast({
+          title: '删除成功',
+          icon: 'success'
+        });
+        // 从列表中移除已删除的评论
+        this.postDetail.comments = this.postDetail.comments.filter(comment => comment.id !== commentId);
+        }else{
+          uni.showToast({
+          title: '删除失败，这不是您的评论',
+          icon: 'none'
+        });
+        }
+        } catch (error) {
+        console.error('删除失败', error);
+        uni.showToast({
+          title: '删除失败，这不是您的评论',
+          icon: 'none'
+        });
+      }
     }
   }
 }

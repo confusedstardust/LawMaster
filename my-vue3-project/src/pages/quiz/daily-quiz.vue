@@ -109,6 +109,18 @@ this.nextQuestionTimer = setTimeout(() => this.nextQuestion(), 2000);
         if (response) {
           uni.showToast({ title: '提交成功', icon: 'success' });
         }
+        // uni.navigateTo({
+        //   url: `/pages/quiz/quiz`
+        // });
+        uni.showToast({ 
+            title: '提交成功', 
+            icon: 'success',
+            success: () => {
+              setTimeout(() => {
+                uni.navigateBack();
+              }, 1500);
+            }
+          });
       } catch (error) {
         console.error('提交答案出错:', error);
         uni.showToast({ title: '提交失败', icon: 'none' });

@@ -152,7 +152,7 @@ export default {
     async handleDeletePost() {
       if (!this.selectedPost.id) return;
       try {
-        await apiRequest(`posts/delete/${this.selectedPost.id}`, 'DELETE');
+        await apiRequest(`posts/delete/${this.selectedPost.id}`, 'Post');
         this.tableData = this.tableData.filter(post => post.id !== this.selectedPost.id);
         uni.showToast({ title: "删除成功", icon: "success" });
         this.$refs.popup.close();
@@ -231,13 +231,7 @@ export default {
   border-top: 1px solid #ddd;
 }
 
-.popup-btn {
-  padding: 10px;
-  font-size: 14px;
-  width: 45%;
-  border-radius: 5px;
-  cursor: pointer;
-}
+
 
 .delete {
   background-color: #e74c3c;
@@ -247,5 +241,33 @@ export default {
 .carousel {
   background-color: #3498db;
   color: white;
+}
+
+.popup-btn {
+  min-width: 160rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 36rpx;
+  font-size: 28rpx;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.popup-btn.delete {
+  background-color: #ff4d4f;
+  color: #fff;
+}
+
+.popup-btn.delete:active {
+  background-color: #cf1322;
+}
+
+.popup-btn.edit {
+  background-color: #2979ff;
+  color: #fff;
+}
+
+.popup-btn.edit:active {
+  background-color: #2567db;
 }
 </style>

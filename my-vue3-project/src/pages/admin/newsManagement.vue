@@ -1,6 +1,6 @@
 <template>
   <view class="news-management">
-    <uni-card title="新闻管理" is-full>
+    <uni-card title="新闻/知识/案例管理" is-full>
       
       <!-- 🔹 搜索框 -->
       <view class="search-bar">
@@ -14,16 +14,34 @@
         <uni-easyinput class="uni-mt-5" suffixIcon="search" v-model="searchQuery" @iconClick="filterNews"></uni-easyinput>
       </view>
 
+      <view v-if="selectedType" class="selected-type">
+        <text>{{ selectedType }}</text>
+        <uni-icons 
+          type="close" 
+          size="20" 
+          @click="clearTypeFilter"
+          class="close-icon"
+        ></uni-icons>
+      </view>
+
       <!-- 🔹 新闻列表 -->
       <uni-table ref="table" class="table" :loading="loading" border stripe emptyText="暂无更多数据">
         <uni-tr>
           <uni-th width="130" align="left">标题</uni-th>
-          <uni-th width="100" align="left">类型</uni-th>
+          <uni-th width="70" align="left">
+            类型
+            <uni-icons 
+              type="more" 
+              size="20" 
+              @click="showTypeList"
+              class="type-icon"
+            ></uni-icons>
+          </uni-th>
           <uni-th width="100" align="left">发布日期</uni-th>
         </uni-tr>
         <uni-tr v-for="(newsItem, index) in paginatedNews" :key="index" @click="showPopup(newsItem)">
           <uni-td style="font-size: small;">{{ newsItem.title }}</uni-td>
-          <uni-td style="font-size: small;"><view class="name">{{ getCategoryById(newsItem.categoryId) }}</view></uni-td>
+          <uni-td style="font-size: small;"><view class="name">{{ newsItem.type }}</view></uni-td>
           <uni-td style="font-size: small;" align="left">{{ formatDate(newsItem.createdAt) }}</uni-td>
         </uni-tr>
       </uni-table>
@@ -50,13 +68,91 @@
         <view class="popup-body">
           <text class="popup-content" v-html="selectedNews.content"></text>
         </view>
+        <!-- <template class="popup-body" v-if="selectedNews.isEditing">
+        <uni-easyinput v-model="selectedNews.title" placeholder="请输入标题"/>
+      </template>
+      <template v-else>
+        <view class="popup-header">
+          <text class="popup-title">{{ selectedNews.title }}</text>
+        </view>
+      </template>
+      
+        <template class="popup-body" v-if="selectedNews.isEditing">
+        <editor
+          class="rich-editor"
+          :value="selectedNews.content"
+          @input="handleEditorInput"
+          placeholder="请输入内容"
+        />
+      </template>
+      <template v-else>
+        <view class="popup-body">
+          <text class="popup-content" v-html="selectedNews.content"></text>
+        </view>
+      </template> -->
 
         <!-- 🔹 操作按钮 -->
         <view class="popup-actions">
           <button class="popup-btn delete" @click="handleDeleteNews">删除新闻</button>
           <button class="popup-btn highlight" @click="handleSetAsHeadline">设为头条</button>
+          <!-- <button class="popup-btn highlight" @click="toggleEditMode"> {{ selectedNews.isEditing ? '确定' : '编辑' }}</button> -->
         </view>
 
+      </view>
+    </uni-popup>
+
+    <!-- 新增按钮 -->
+    <view class="add-button" @click="showAddForm">
+      <uni-icons type="plusempty" size="24" color="#fff"></uni-icons>
+    </view>
+
+    <!-- 新增表单弹窗 -->
+    <uni-popup ref="addFormPopup" type="center">
+      <view class="form-container">
+        <view class="form-header">
+          <text class="form-title">新增内容</text>
+        </view>
+        
+        <view class="form-body">
+          <uni-forms ref="form" :model="formData">
+            <uni-forms-item label="标题" required>
+              <uni-easyinput v-model="formData.title" placeholder="请输入标题"/>
+            </uni-forms-item>
+            
+            <uni-forms-item label="类型" required>
+              <uni-data-select
+                v-model="formData.type"
+                :localdata="typeOptions"
+                placeholder="请选择类型"
+              />
+            </uni-forms-item>
+
+            <uni-forms-item label="法系" required>
+              <uni-data-select
+                v-model="formData.categoryId"
+                :localdata="categoryList.map(item => ({
+                  value: item.id,
+                  text: item.name
+                }))"
+                placeholder="请选择法系"
+              />
+            </uni-forms-item>
+
+            <uni-forms-item label="内容" required>
+              <editor
+                class="rich-editor"
+                :value="formData.content"
+                @input="handleEditorInput"
+                placeholder="请输入内容"
+              />
+            </uni-forms-item>
+          </uni-forms>
+        </view>
+
+        <view class="form-actions">
+          <button class="popup-btn cancel" @click="closeAddForm">取消</button>
+          <button class="popup-btn highlight" @click="submitForm">提交</button>
+        </view>
       </view>
     </uni-popup>
   </view>
@@ -81,6 +177,18 @@ export default {
         { value: 2, text: "内容" }
       ],
       selectedNews: {}, // 存储选中的新闻
+      selectedType: null, // 存储用户选择的类型
+      formData: {
+        title: '',
+        type: '',
+        categoryId: '',
+        content: ''
+      },
+      typeOptions: [
+        { value: '案例', text: '案例' },
+        { value: '新闻', text: '新闻' },
+        { value: '知识', text: '知识' }
+      ]
     };
   },
   computed: {
@@ -108,10 +216,12 @@ export default {
           default:
             apiUrl = `articles/all`;
         }
-
+        const categoryArray=await apiRequest('categories/all','get');
+        this.categoryList=categoryArray;
         const response = await apiRequest(apiUrl, 'get');
         this.newsData = Array.isArray(response) ? response : [response];
         this.filteredNews = [...this.newsData];
+        this.filterByType(); // 新增：在获取新闻后应用类型过滤
       } catch (error) {
         console.error('获取新闻失败:', error);
       } finally {
@@ -150,7 +260,7 @@ export default {
     async handleDeleteNews() {
       if (!this.selectedNews.id) return;
       try {
-        await apiRequest(`news/delete/${this.selectedNews.id}`, 'DELETE');
+        await apiRequest(`articles/delete/${this.selectedNews.id}`, 'post');
         this.newsData = this.newsData.filter(news => news.id !== this.selectedNews.id);
         this.filteredNews = [...this.newsData];
         uni.showToast({ title: "删除成功", icon: "success" });
@@ -171,6 +281,115 @@ export default {
         uni.showToast({ title: "操作失败", icon: "none" });
       }
     },
+    showTypeList() {
+      const uniqueTypes = [...new Set(this.newsData.map(item => item.type))];
+      uni.showActionSheet({
+        itemList: uniqueTypes,
+        success: (res) => {
+          this.selectedType = uniqueTypes[res.tapIndex];
+          this.filterByType();
+        },
+        fail: (res) => {
+          console.log(res.errMsg);
+        }
+      });
+    },
+    filterByType() {
+      if (this.selectedType) {
+        this.filteredNews = this.newsData.filter(news => news.type === this.selectedType);
+      } else {
+        this.filteredNews = [...this.newsData];
+      }
+    },
+    clearTypeFilter() {
+      this.selectedType = null;
+      this.filteredNews = [...this.newsData];
+    },
+    showAddForm() {
+      this.$refs.addFormPopup.open();
+    },
+    
+    closeAddForm() {
+      this.$refs.addFormPopup.close();
+      this.formData = {
+        title: '',
+        type: '',
+        categoryId: '',
+        content: ''
+      };
+    },
+    
+    handleEditorInput(e) {
+      this.formData.content = e;
+    },
+    async submitForm() {
+      if (!this.formData.title || !this.formData.type || !this.formData.categoryId || !this.formData.content) {
+        uni.showToast({
+          title: '请填写完整信息',
+          icon: 'none'
+        });
+        return;
+      }
+      
+      try {
+        this.formData.content=this.formData.content.detail.html;
+        await apiRequest('articles', 'POST', this.formData);
+        uni.showToast({
+          title: '添加成功',
+          icon: 'success'
+        });
+        this.closeAddForm();
+        this.fetchNews();
+      } catch (error) {
+        console.error('添加失败:', error);
+        uni.showToast({
+          title: '添加失败',
+          icon: 'none'
+        });
+      }
+    }
+    ,toggleEditMode() {
+    if (this.selectedNews.isEditing) {
+      // 如果当前是“确定”状态，提交数据
+      this.updateNewsContent();
+    } else {
+      // 进入编辑模式
+      this.selectedNews.isEditing = true;
+    }
+  },
+
+  // 🔹 监听编辑器输入
+  handleEditorInput(e) {
+    this.selectedNews.content = e;
+  },
+
+  // 🔹 提交更新到后端
+  async updateNewsContent() {
+    if (!this.selectedNews.id) return;
+    
+    try {
+      await apiRequest(`articles/update/${this.selectedNews.id}`, 'POST', {
+        content: this.selectedNews.content.detail.html // 获取 HTML 内容
+      });
+
+      uni.showToast({
+        title: "更新成功",
+        icon: "success"
+      });
+
+      // 退出编辑模式
+      this.selectedNews.isEditing = false;
+
+      // 刷新数据
+      this.fetchNews();
+    } catch (error) {
+      console.error("更新失败:", error);
+      uni.showToast({
+        title: "更新失败",
+        icon: "none"
+      });
+    }
+  }
   },
 };
 </script>
@@ -232,12 +451,33 @@ export default {
   border-top: 1px solid #ddd;
 }
 
+
 .popup-btn {
-  padding: 10px;
-  font-size: 14px;
-  width: 45%;
-  border-radius: 5px;
-  cursor: pointer;
+  min-width: 160rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 36rpx;
+  font-size: 28rpx;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.popup-btn.delete {
+  background-color: #ff4d4f;
+  color: #fff;
+}
+
+.popup-btn.delete:active {
+  background-color: #cf1322;
+}
+
+.popup-btn.edit {
+  background-color: #2979ff;
+  color: #fff;
+}
+
+.popup-btn.edit:active {
+  background-color: #2567db;
 }
 
 .delete {
@@ -248,5 +488,94 @@ export default {
 .highlight {
   background-color: #3498db;
   color: white;
+}
+
+.type-icon {
+  margin-left: 5px;
+  cursor: pointer;
+  color: #666;
+}
+
+.selected-type {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 5px 10px;
+  background-color: #f0f0f0;
+  border-radius: 5px;
+}
+
+.close-icon {
+  margin-left: 5px;
+  cursor: pointer;
+  color: #666;
+}
+
+.add-button {
+  position: fixed;
+  right: 30rpx;
+  bottom: 30rpx;
+  width: 100rpx;
+  height: 100rpx;
+  background-color: #2979ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+  z-index: 999;
+}
+
+.form-container {
+  background-color: #fff;
+  border-radius: 24rpx;
+  width: 80vw;
+  max-height: 80vh;
+  padding: 30rpx;
+}
+
+.form-header {
+  margin-bottom: 30rpx;
+  text-align: center;
+}
+
+.form-title {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+.form-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.rich-editor {
+  width: 100%;
+  height: 300rpx;
+  border: 1rpx solid #eee;
+  border-radius: 8rpx;
+}
+
+.form-actions {
+  margin-top: 30rpx;
+  display: flex;
+  justify-content: flex-end;
+  gap: 20rpx;
+}
+
+.form-btn {
+  padding: 16rpx 40rpx;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+}
+
+.form-btn.cancel {
+  background-color: #f5f5f5;
+  color: #666;
+}
+
+.form-btn.submit {
+  background-color: #2979ff;
+  color: #fff;
 }
 </style>

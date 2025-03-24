@@ -112,7 +112,15 @@ export default {
         const response = await apiRequest('/userAnswers/list', 'POST', this.userAnswers);
   
         if (response) {
-          uni.showToast({ title: '提交成功', icon: 'success' });
+          uni.showToast({ 
+            title: '提交成功', 
+            icon: 'success',
+            success: () => {
+              setTimeout(() => {
+                uni.navigateBack();
+              }, 1500);
+            }
+          });
         }
       } catch (error) {
         console.error('提交答案出错:', error);

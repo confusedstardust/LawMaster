@@ -27,6 +27,10 @@
           <uni-td style="font-size: small;" align="left">{{ formatDate(user.created_at)}}</uni-td>
         </uni-tr>
       </uni-table>
+       <!-- 新增按钮 -->
+    <view class="add-button" @click="showAddForm">
+      <uni-icons type="plusempty" size="24" color="#fff"></uni-icons>
+    </view>
 
       <!-- 🔹 分页组件 -->
       <uni-pagination 
@@ -36,30 +40,107 @@
         @change="handlePageChange"
       />
     </uni-card>
+   
 
     <!-- 🔹 用户详情弹出框 -->
     <uni-popup ref="popup" type="center">
       <view class="popup-container">
-        
         <!-- 🔹 标题 -->
         <view class="popup-header">
-          <text class="popup-title">{{ selectedUser.username }}</text>
+          <text class="popup-title">用户详情</text>
         </view>
 
-        <!-- 🔹 内容（固定高度 + 滚动条） -->
+        <!-- 🔹 内容 -->
         <view class="popup-body">
-          <text class="popup-content">邮箱：{{ selectedUser.role }}</text>
-          <text class="popup-content">注册日期：{{ formatDate(selectedUser.created_at) }}</text>
+          <view class="detail-item">
+            <text class="detail-label">用户昵称：</text>
+            <uni-easyinput
+              v-model="selectedUser.nickname"
+              placeholder="请输入用户昵称"
+              trim="both"
+            />
+          </view>
+
+          <view class="detail-item">
+            <text class="detail-label">手机号码：</text>
+            <uni-easyinput
+              v-model="selectedUser.pnumber"
+              placeholder="请输入手机号码"
+              trim="both"
+            />
+          </view>
+
+          <view class="detail-item">
+            <text class="detail-label">用户权限：</text>
+            <uni-data-select
+              v-model="selectedUser.role"
+              :localdata="[
+                { value: 'admin', text: '管理员' },
+                { value: 'user', text: '普通用户' }
+              ]"
+              placeholder="请选择用户权限"
+            />
+          </view>
+
+          <view class="form-item">
+            <text class="label">用户名：</text>
+            <text>{{ selectedUser.username }}</text>
+          </view>
+          <view class="form-item">
+            <text class="label">注册日期：</text>
+            <text>{{ formatDate(selectedUser.created_at) }}</text>
+          </view>
         </view>
 
         <!-- 🔹 操作按钮 -->
         <view class="popup-actions">
+          <button class="popup-btn edit" @click="handleSaveChanges">保存修改</button>
           <button class="popup-btn delete" @click="handleDeleteUser">删除用户</button>
-          <button class="popup-btn role" @click="handleChangeRole">修改权限</button>
-          <button class="popup-btn role" @click="handleChangeRole">修改密码</button>
+        </view>
+      </view>
+    </uni-popup>
 
+    <!-- 新增表单弹窗 -->
+    <uni-popup ref="addFormPopup" type="center">
+      <view class="form-container">
+        <view class="form-header">
+          <text class="form-title">新增内容</text>
+        </view>
+        
+        <view class="form-body">
+          <uni-forms ref="form" :model="formData">
+            <uni-forms-item label="用户名" required>
+              <uni-easyinput v-model="formData.username" placeholder="请输入用户名"/>
+            </uni-forms-item>
+            
+            <uni-forms-item label="权限" required>
+              <uni-data-select
+                v-model="formData.role"
+                :localdata="typeOptions"
+                placeholder="请选择类型"
+              />
+            </uni-forms-item>
+
+            <uni-forms-item label="昵称" required>
+              <uni-easyinput v-model="formData.nickname" placeholder="请输入昵称"/>
+            </uni-forms-item>
+            <uni-forms-item label="电话号码" required>
+              <uni-easyinput v-model="formData.pnumber" placeholder="请输入电话号码"/>
+            </uni-forms-item>
+            <uni-forms-item label="用户密码" required>
+              <uni-easyinput
+                v-model="formData.password"
+                type="password"
+                placeholder="请输入密码"
+              />
+            </uni-forms-item>
+          </uni-forms>
         </view>
 
+        <view class="form-actions">
+          <button class="popup-btn delete" @click="closeAddForm">取消</button>
+          <button class="popup-btn edit" @click="submitForm">新增</button>
+        </view>
       </view>
     </uni-popup>
   </view>
@@ -78,12 +159,27 @@ export default {
       currentPage: 1,
       pageSize: 10,
       Typevalue: 0,
+      formData: {
+        password: '',
+        role: '',
+        username: '',
+        pnumber: ''
+      },
+      typeOptions: [
+        { value: 'admin', text: 'admin' },
+        { value: 'user', text: 'user' }
+      ],
       range: [
         { value: 1, text: "用户ID" },
         { value: 2, text: "用户名" },
         { value: 3, text: "用户类型" }
       ],
       selectedUser: {}, // 存储选中的用户
+      roleOptions: [
+        { value: 'admin', text: '管理员' },
+        { value: 'user', text: '普通用户' }
+      ],
+      originalUserData: {}, // 用于存储未修改的用户数据
     };
   },
   computed: {
@@ -119,12 +215,63 @@ export default {
         this.usersData = response.map(user => ({
           id: user.id,
           username: user.username,
+          nickname: user.nickname,
+          pnumber: user.pnumber,
           role: user.role,
           created_at: user.createdAt
         }));
         this.filteredUsers = [...this.usersData];
       } catch (error) {
         console.error('获取用户失败:', error);
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    async submitForm() {
+      if (!this.formData.password || !this.formData.role || !this.formData.username || !this.formData.pnumber) {
+        uni.showToast({
+          title: '请填写完整信息',
+          icon: 'none'
+        });
+        return;
+      }
+      
+      try {
+        // this.formData.content=this.formData.content.detail.html;
+        const response = await apiRequest('users/register', 'post',this.formData )
+        if (response) {
+          uni.showToast({
+          title: '添加成功',
+          icon: 'success'
+        });
+        this.closeAddForm();
+        this.fetchNews();
+        }
+      } catch (error) {
+        console.error('添加失败:', error);
+        uni.showToast({
+          title: '添加失败',
+          icon: 'none'
+        });
+      }
+    },
+    
+    async fetchNews() {
+      this.loading = true;
+      try {
+        const response=await apiRequest('users/allusers','get');
+        this.usersData = response.map(user => ({
+          id: user.id,
+          username: user.username,
+          nickname: user.nickname,
+          pnumber: user.pnumber,
+          role: user.role,
+          created_at: user.createdAt
+        }));
+        this.filteredUsers = [...this.usersData];
+      } catch (error) {
+        console.error('获取新闻失败:', error);
       } finally {
         this.loading = false;
       }
@@ -136,8 +283,67 @@ export default {
       this.currentPage = event.current;
     },
     showPopup(user) {
-      this.selectedUser = user;
+      this.selectedUser = { ...user };
+      this.originalUserData = { ...user }; // 保存原始数据
       this.$refs.popup.open();
+    },
+    closePopup() {
+      this.$refs.popup.close();
+    },
+    handleRoleChange(value) {
+      this.selectedUser.role = value;
+    },    showAddForm() {
+      this.formData = {
+        password: '',
+        role: '',
+        username: '',
+        pnumber: '',
+        password: '',
+        nickname: '',
+      };
+      this.$refs.addFormPopup.open();
+    },
+    
+    closeAddForm() {
+      this.$refs.addFormPopup.close();
+      this.formData = {
+        password: '',
+        role: '',
+        username: '',
+        pnumber: '',
+        password: '',
+        nickname: '',
+      };
+    },
+    async handleSaveChanges() {
+      if (!this.selectedUser.id) return;
+      
+      try {
+        // 只有当角色发生变化时才发送请求
+        if (this.selectedUser.role !== this.originalUserData.role || this.selectedUser.nickname !== this.originalUserData.nickname || this.selectedUser.pnumber !== this.originalUserData.pnumber) {
+          await apiRequest(`users/update`, 'POST', {
+            id: this.selectedUser.id,
+            role: this.selectedUser.role,
+            nickname: this.selectedUser.nickname,
+            pnumber: this.selectedUser.pnumber
+          });
+          
+          // 更新本地数据
+          const userIndex = this.usersData.findIndex(u => u.id === this.selectedUser.id);
+          if (userIndex !== -1) {
+            this.usersData[userIndex] = { ...this.selectedUser };
+            this.filteredUsers = [...this.usersData];
+          }
+          
+          uni.showToast({ title: "更新成功", icon: "success" });
+          this.$refs.popup.close();
+        } else {
+          this.$refs.popup.close();
+        }
+      } catch (error) {
+        console.error("更新失败:", error);
+        uni.showToast({ title: "更新失败", icon: "none" });
+      }
     },
     formatDate(dateString) {
       // 预处理字符串，去掉最后的 " 00:00"
@@ -156,7 +362,7 @@ export default {
     async handleDeleteUser() {
       if (!this.selectedUser.id) return;
       try {
-        await apiRequest(`users/delete/${this.selectedUser.id}`, 'DELETE');
+        await apiRequest(`users/delete/${this.selectedUser.id}`, 'post');
         this.usersData = this.usersData.filter(user => user.id !== this.selectedUser.id);
         this.filteredUsers = [...this.usersData];
         uni.showToast({ title: "删除成功", icon: "success" });
@@ -164,17 +370,6 @@ export default {
       } catch (error) {
         console.error("删除用户失败:", error);
         uni.showToast({ title: "删除失败", icon: "none" });
-      }
-    },
-    async handleChangeRole() {
-      if (!this.selectedUser.id) return;
-      try {
-        await apiRequest(`users/change-role/${this.selectedUser.id}`, 'POST');
-        uni.showToast({ title: "权限已修改", icon: "success" });
-        this.$refs.popup.close();
-      } catch (error) {
-        console.error("修改权限失败:", error);
-        uni.showToast({ title: "操作失败", icon: "none" });
       }
     },
   },
@@ -185,7 +380,52 @@ export default {
 .user-management {
   padding: 16px;
 }
+.form-container {
+  background-color: #fff;
+  border-radius: 24rpx;
+  width: 80vw;
+  max-height: 80vh;
+  padding: 30rpx;
+}.form-header {
+  margin-bottom: 30rpx;
+  text-align: center;
+}.form-btn.cancel {
+  background-color: #f5f5f5;
+  color: #666;
+}
 
+.form-btn.submit {
+  background-color: #2979ff;
+  color: #fff;
+}
+
+.form-title {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+.form-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}.rich-editor {
+  width: 100%;
+  height: 300rpx;
+  border: 1rpx solid #eee;
+  border-radius: 8rpx;
+}
+
+.form-actions {
+  margin-top: 30rpx;
+  display: flex;
+  justify-content: flex-end;
+  gap: 20rpx;
+}
+
+.form-btn {
+  padding: 16rpx 40rpx;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+}
 .search-bar {
   display: flex;
   margin-bottom: 16px;
@@ -195,66 +435,125 @@ export default {
   margin-top: 10px;
 }
 
-/* 🔹 弹出框样式 */
 .popup-container {
-  padding: 20px;
   background-color: #fff;
-  border-radius: 10px;
-  text-align: center;
-  width: 320px;
+  border-radius: 24rpx;
+  width: 600rpx;
+  min-height: 400rpx;
+  max-height: 800rpx;
+  padding: 30rpx;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Section 1: 标题 */
 .popup-header {
-  padding: 10px 0;
-  border-bottom: 1px solid #ddd;
+  margin-bottom: 20rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 2rpx solid #eee;
+  flex-shrink: 0;
 }
 
 .popup-title {
-  font-size: 18px;
-  font-weight: bold;
-  text-align: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
 }
 
-/* Section 2: 内容（固定高度 + 滚动条） */
 .popup-body {
-  max-height: 150px;
+  flex: 1;
   overflow-y: auto;
-  padding: 10px;
-  text-align: left;
+  padding: 0 20rpx;
 }
 
-.popup-content {
-  font-size: 14px;
-  color: #555;
-  line-height: 1.5;
-  display: block;
-  margin-bottom: 5px;
-}
-
-/* Section 3: 操作按钮 */
-.popup-actions {
+.detail-item {
+  margin-bottom: 24rpx;
   display: flex;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-top: 1px solid #ddd;
+  align-items: center;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background-color: #f8f9fa;
+}
+
+.detail-label {
+  width: 160rpx;
+  color: #666;
+  font-size: 28rpx;
+  flex-shrink: 0;
+}
+
+.detail-item :deep(.uni-easyinput__content),
+.detail-item :deep(.uni-data-select) {
+  flex: 1;
+  background-color: #fff;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.detail-item :deep(.uni-easyinput__content) {
+  min-height: 70rpx;
+  border: 2rpx solid #ddd;
+}
+
+.detail-item :deep(.uni-data-select) {
+  border: 2rpx solid #ddd;
+}
+
+.detail-item :deep(.uni-easyinput__content-input) {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.popup-actions {
+  margin-top: 30rpx;
+  display: flex;
+  justify-content: flex-end;
+  gap: 20rpx;
+  padding-top: 20rpx;
+  border-top: 2rpx solid #eee;
+  flex-shrink: 0;
 }
 
 .popup-btn {
-  padding: 10px;
-  font-size: 14px;
-  width: 45%;
-  border-radius: 5px;
-  cursor: pointer;
+  min-width: 160rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 36rpx;
+  font-size: 28rpx;
+  border: none;
+  transition: all 0.3s ease;
 }
 
-.delete {
-  background-color: #e74c3c;
-  color: white;
+.popup-btn.delete {
+  background-color: #ff4d4f;
+  color: #fff;
 }
 
-.role {
-  background-color: #3498db;
-  color: white;
+.popup-btn.delete:active {
+  background-color: #cf1322;
 }
+
+.popup-btn.edit {
+  background-color: #2979ff;
+  color: #fff;
+}
+
+.popup-btn.edit:active {
+  background-color: #2567db;
+}
+
+.add-button {
+  position: fixed;
+  right: 30rpx;
+  bottom: 30rpx;
+  width: 100rpx;
+  height: 100rpx;
+  background-color: #2979ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+  z-index: 999;
+}
+
 </style>
