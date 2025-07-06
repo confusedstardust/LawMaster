@@ -5,9 +5,11 @@
       <view class="section-title">答题</view>
       <view class="section-content">
         <view class="card" @click="navigateToDailyQuiz">
+          <uni-icons type="medal-filled" color="#2979ff" size="30"></uni-icons>
           <text class="card-title">每日答题</text>
         </view>
         <view class="card" @click="navigateToWrongQuestions">
+          <uni-icons type="info" color="#2979ff" size="30"></uni-icons>
           <text class="card-title">错题集</text>
         </view>
       </view>
@@ -15,9 +17,11 @@
 
     <!-- 专项答题部分 -->
     <view class="section">
+      
       <view class="section-title">专项答题</view>
       <view class="section-content">
         <view class="card" v-for="category in categories" :key="category.id" @click="navigateToSpecialQuiz(category.id)">
+          <uni-icons type="wallet-filled" color="#2979ff" size="30"></uni-icons>
           <text class="card-title">{{ category.name }}</text>
         </view>
       </view>
@@ -131,16 +135,35 @@ export default {
 </script>
 
 <style>
+/* 页面整体 */
 .quiz-container {
-  padding: 30rpx;
-  background-color: #f5f5f5;
+  background-color: #f2f2f2;
   min-height: 100vh;
+  padding-bottom: 20px;
 }
 
+/* 头部 */
+.header {
+  background-color: #008CFF;
+  color: white;
+  padding: 20rpx;
+  font-size: 34rpx;
+  font-weight: bold;
+  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 每个模块 */
 .section {
-  margin-bottom: 40rpx;
+  background: #ffffff;
+  border-radius: 20rpx;
+  margin: 20rpx;
+  padding: 20rpx;
 }
 
+/* 模块标题 */
 .section-title {
   font-size: 32rpx;
   font-weight: bold;
@@ -148,27 +171,59 @@ export default {
   margin-bottom: 20rpx;
 }
 
+/* 答题部分（两列布局） */
 .section-content {
   display: flex;
+  justify-content: space-between;
+  gap: 20rpx;
   flex-wrap: wrap;
 }
 
+/* 卡片样式 */
 .card {
-  background-color: #fff;
-  border-radius: 12rpx;
-  padding: 30rpx;
-  margin-right: 20rpx;
-  margin-bottom: 20rpx;
-  flex: 1 1 45%; /* 使卡片在一行中占据一定比例 */
+  flex: 1;
+  background: white;
+  padding: 40rpx;
+  border-radius: 20rpx;
+  text-align: center;
+  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.1);
+  transition: 0.3s;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.1);
 }
 
+.card:hover {
+  transform: scale(1.05);
+}
+
+/* 卡片标题 */
 .card-title {
+  display: block;
+  margin-top: 10rpx;
   font-size: 28rpx;
-  color: #007AFF;
+  font-weight: bold;
+}
+
+/* 专项答题（列表布局） */
+.list-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.list-item {
+  background: #f8f8f8;
+  padding: 20rpx;
+  margin-top: 10rpx;
+  font-size: 28rpx;
+  color: #333;
+  border-radius: 10rpx;
+  text-align: center;
+  transition: 0.3s;
+}
+
+.list-item:hover {
+  background: #e6e6e6;
 }
 </style> 

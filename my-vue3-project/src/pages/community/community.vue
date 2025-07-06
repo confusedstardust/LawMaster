@@ -35,7 +35,7 @@
             class="post-item" 
             v-for="item in leftList" 
             :key="item.id"
-            @click="navigateToDetail(item.id,item.comments)"
+            @click="navigateToDetail(item.id,item.comments,item.userAvatar,item.username)"
           >
             <image 
               class="post-image" 
@@ -73,7 +73,7 @@
             class="post-item" 
             v-for="item in rightList" 
             :key="item.id"
-            @click="navigateToDetail(item.id,item.comments)"
+            @click="navigateToDetail(item.id,item.comments,item.userAvatar,item.username)"
           >
             <image 
               class="post-image" 
@@ -115,7 +115,7 @@
         <text class="modal-title">搜索结果</text>
         <text class="modal-description">找到 {{ filteredCommunityList.length }} 篇文章</text>
         <view>
-          <text v-for="item in filteredCommunityList" :key="item.id" @click="navigateToDetail(item.id,item.comments)" class="modal-item">{{ item.title }}</text>
+          <text v-for="item in filteredCommunityList" :key="item.id" @click="navigateToDetail(item.id,item.comments,item.userAvatar,item.username)" class="modal-item">{{ item.title }}</text>
         </view>
         <button @click="closeModal">关闭</button>
       </view>
@@ -157,6 +157,10 @@ export default {
     this.fetchPosts(); // 组件挂载时获取帖子
     // this.fetchCommunityList(); // 获取社区内容
   },
+  onShow(){
+    this.fetchPosts(); // 组件挂载时获取帖子
+    // this.fetchCommunityList(); // 获取社区内容
+  },
   methods: {
     async fetchPosts() {
       try {
@@ -170,14 +174,17 @@ export default {
             return `http://localhost:8080/files/download/${imageName}`; // 拼接完整的图片 URL
           });
           const commentsCount = await this.fetchComments(post.id); // 获取评论
-
+          console.log("post.userId",post.userId);
+          const info = await this.getUserInfo(post.userId);
+          const userNickName = info.nickname;
+          const userAvatar=  `http://localhost:8080/files/download/${info.avatar} `;
           return {
             id: post.id,
             title: post.title,
             content: post.content,
             images: imagesUrls, // 使用拼接的图片 URL
-            userAvatar: post.Avatar, // 这里可以替换为实际的用户头像
-            username: '用户' + post.userId,
+            userAvatar: userAvatar, // 这里可以替换为实际的用户头像
+            username: userNickName,
             likes: post.likes,
             comments: commentsCount,
             isLiked: false
@@ -216,15 +223,25 @@ export default {
       await new Promise(resolve => setTimeout(resolve, 1000));
       this.isRefreshing = false;
     },
-    navigateToDetail(id,comments) {
+    async navigateToDetail(id,comments,userAvatar,userNickName) {
+      const res= await apiRequest(`posts/addviews/${id}`, 'post');
       uni.navigateTo({
-        url: `/pages/community/post-detail?id=${id}&comments=${JSON.stringify(comments)}`
+        url: `/pages/community/post-detail?id=${id}&comments=${JSON.stringify(comments)}&userAvatar=${userAvatar}&username=${userNickName}`
       });
     },
     navigateToPublish() {
       uni.navigateTo({
         url: '/pages/community/publish'
       });
+    },
+    async getUserInfo(id){
+      try {
+        const response = await apiRequest(`users/info/${id}`, 'get');
+        return response
+      } catch (error) {
+        console.error('获取用户昵称失败:', error);
+        return '';
+      }
     },
     async fetchCommunityList() {
       try {
@@ -450,7 +467,7 @@ export default {
   bottom: 120rpx;
   width: 80rpx;
   height: 80rpx;
-  background: #FF0000;
+  background: #157df3;
   border-radius: 50%;
   display: flex;
   align-items: center;

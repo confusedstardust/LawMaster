@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 // 创建 Axios 实例
+axios.defaults.timeout=50000;
 const apiClient = axios.create({
   baseURL: 'http://localhost:8080/', // 目标 API 服务器
   timeout: 10000, // 请求超时时间

@@ -6,13 +6,13 @@
 				<uni-drawer ref="showLeft" mode="left" :width="220" @change="change($event,'showLeft')">
 					<view class="close">
 						<!-- <button @click="closeDrawer('showLeft')"><text class="word-btn-white">关闭Drawer</text></button> -->
-            <uni-list-item title="帖子管理" @click="navigateTo('postManagement')" note="列表描述信息" link>
+            <uni-list-item title="帖子管理" @click="navigateTo('postManagement')" note="" link>
                 <template v-slot:footer>
                   <uni-icons type="pyq" size="30"></uni-icons>
                 </template>
           </uni-list-item>
 
-          <uni-list-item @click="navigateTo('userManagement')" title="用户管理"  note="列表描述信息" link >
+          <uni-list-item @click="navigateTo('userManagement')" title="用户管理"  note="" link >
                 <template v-slot:footer>
                   <uni-icons type="contact" size="30" ></uni-icons>
                   <!-- <image class="slot-image" src="/static/logo.png" mode="widthFix"></image> -->
@@ -20,21 +20,27 @@
           </uni-list-item>
 
 
-          <uni-list-item title="题库管理" @click="navigateTo('questionBankManagement')" note="列表描述信息" link>
+          <uni-list-item title="题库管理" @click="navigateTo('questionBankManagement')" note="" link>
                 <template v-slot:footer>
                   <uni-icons type="compose" size="30"></uni-icons>
                   <!-- <image class="slot-image" src="/static/logo.png" mode="widthFix"></image> -->
                 </template>
           </uni-list-item>
 
-          <uni-list-item title="新闻/知识/案例管理" @click="navigateTo('newsManagement')" note="列表描述信息" link>
+          <uni-list-item title="新闻/知识/案例管理" @click="navigateTo('newsManagement')" note="" link>
                 <template v-slot:footer>
                   <uni-icons type="wallet-filled" size="30"></uni-icons>
                   <!-- <image class="slot-image" src="/static/logo.png" mode="widthFix"></image> -->
                 </template>
           </uni-list-item>
+          <uni-list-item title="类型管理" @click="navigateTo('categoryManagement')" note="" link>
+                <template v-slot:footer>
+                  <uni-icons type="list" size="30"></uni-icons>
+                  <!-- <image class="slot-image" src="/static/logo.png" mode="widthFix"></image> -->
+                </template>
+          </uni-list-item>
 
-		  <uni-list-item title="登出" @click="handleLogout" note="列表描述信息" link>
+		  <uni-list-item title="登出" @click="handleLogout" note="" link>
                 <template v-slot:footer>
                   <uni-icons type="undo-filled" size="30"></uni-icons>
                   <!-- <image class="slot-image" src="/static/logo.png" mode="widthFix"></image> -->
@@ -180,19 +186,17 @@ export default {
         const questionsResponse = await apiRequest("questions/all", "get");
 
         this.userCount = userResponse;
-        this.postCount = postResponse.length;
-        this.newsCount = newsResponse.length;
-        this.questionBankCount = questionsResponse.length;
+        this.postCount = postResponse;
+        this.newsCount = newsResponse;
+        this.questionBankCount = questionsResponse;
         this.list = [
           { url: "/static/c1.png", text: "用户人数", badge: this.userCount, type: "primary" },
-          { url: "/static/c2.png", text: "帖子总数", badge: this.postCount, type: "success" },
-          { url: "/static/c3.png", text: "新闻/知识总数", badge: this.newsCount, type: "warning" },
-          { url: "/static/c4.png", text: "题库总数", badge: this.questionBankCount, type: "error" },
+          { url: "/static/c2.png", text: "帖子总数", badge: this.postCount.length, type: "success" },
+          { url: "/static/c4.png", text: "题库总数", badge: this.questionBankCount.length, type: "error" },
+          { url: "/static/c3.png", text: "新闻总数", badge: this.newsCount.filter(item=>item.type==="新闻").length, type: "warning" },
+          { url: "/static/c4.png", text: "知识总数", badge: this.newsCount.filter(item=>item.type==="知识").length, type: "error" },
+          { url: "/static/c4.png", text: "案例总数", badge: this.newsCount.filter(item=>item.type==="案例").length, type: "error" },
 		  { url: "/static/c4.png", text: "题库类型数", badge: this.categoryList.length, type: "error" },
-		  { url: "/static/c4.png", text: "易错题排行", badge: this.questionBankCount, type: "error" },
-		  { url: "/static/c4.png", text: "热帖排行", badge: this.questionBankCount, type: "error" },
-		  { url: "/static/c4.png", text: "收藏最多", badge: this.questionBankCount, type: "error" },
-		  { url: "/static/c4.png", text: "点赞最多", badge: this.questionBankCount, type: "error" },
         ];
       } catch (error) {
         console.error("Error fetching statistics:", error);
@@ -202,8 +206,10 @@ export default {
       const response = await apiRequest("questions/countByCategory", "get");
 	  const categoryArray=await apiRequest('categories/all','get');
     	this.categoryList=categoryArray
-      let categories = response.map(item => `${this.getCategoryById(item.category_id)}`);
+      // let categories = response.map(item => `${this.getCategoryById(item.category_id)}`);
+      let categories=this.categoryList.map(item=>item.name)
       let data = response.map(item => item.count);
+      console.log(data)
       this.drawCharts("categoryChart", categories, [{ name: "问题数", data }]);
     } catch (error) {
       console.error("获取分类问题数量失败:", error);

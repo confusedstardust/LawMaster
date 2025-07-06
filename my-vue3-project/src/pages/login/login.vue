@@ -46,8 +46,26 @@
         <!-- <text class="iconfont icon-eye"></text> -->
         <uni-data-checkbox v-model="radioval" :localdata="selectedRole" @change="handleRoleChange"></uni-data-checkbox>
       </view>
-      <view class="forgot-password" @click="forgotPassword">忘记密码？</view>
+      <view class="forgot-password" @click="activeTab = 'forgot'">忘记密码？</view>
       <button class="primary" @click="handleLogin">登录</button>
+    </view>
+    <!-- 其他登录方式 -->
+    <view class="form-container" v-if="activeTab === 'other-login'">
+      <!-- 🔹 新增：手机号验证码登录 -->
+        <view class="input-group">
+          <text class="iconfont icon-phone"></text>
+          <input type="text" v-model="phoneLoginForm.pnumber" placeholder="请输入手机号" />
+        </view>
+        <view class="input-group">
+          <text class="iconfont icon-code"></text>
+          <input type="text" v-model="phoneLoginForm.verifycode" placeholder="请输入验证码" />
+          
+            <!-- <text class="iconfont icon-eye"></text> -->
+            
+          <button class="code-btn" :disabled="isCountingDown" @click="sendCode">{{ countDownText }}</button>
+      </view>
+      <uni-data-checkbox v-model="radioval" :localdata="selectedRole" @change="handleRoleChange"></uni-data-checkbox>
+      <button class="primary" @click="handleVeryifyCodeLogin">登录</button>
     </view>
 
     <!-- 注册表单 -->
@@ -87,16 +105,42 @@
       <button class="submit-btn" @click="handleRegister">注册</button>
     </view>
 
-    <!-- 其他登录方式 -->
-    <view class="other-login">
-      <view class="divider">
-        <text>其他登录方式</text>
-      </view>
-      <view class="social-login">
-        <view class="social-item">
-          <text class="iconfont icon-wechat"></text>
+    <!-- 🔹 忘记密码 -->
+    <view class="form-container" v-if="activeTab === 'forgot'">
+      <view class="input-group">
+          <text class="iconfont icon-phone"></text>
+          <input type="text" v-model="forgetpswForm.pnumber" placeholder="请输入手机号" />
         </view>
+        <view class="input-group">
+          <text class="iconfont icon-code"></text>
+          <input type="text" v-model="forgetpswForm.verifycode" placeholder="请输入验证码" />
+          
+            <!-- <text class="iconfont icon-eye"></text> -->
+            
+          <button class="code-btn" :disabled="isCountingDown" @click="sendForgotCode">{{ countDownText }}</button>
       </view>
+
+      <view class="input-group">
+        <text class="iconfont icon-password"></text>
+        <input type="password" v-model="forgetpswForm.password" placeholder="请输入新密码" />
+      </view>
+      <view class="input-group">
+        <text class="iconfont icon-password"></text>
+        <input type="password" v-model="forgetpswForm.confirmPassword" placeholder="再次输入新密码" />
+      </view>
+      <button class="submit-btn" @click="handleForgotPassword">重置密码</button>
+    </view>
+
+
+    <!-- 其他登录方式 -->
+    <view class="other-login" @click="activeTab = 'other-login'">
+      <view class="divider">
+        <text>手机号码方式登录</text>
+        <view class="social-login">
+          <uni-icons type="phone-filled" size="30"></uni-icons>
+      </view>
+      </view>
+
     </view>
   </view>
 </template>
@@ -112,11 +156,21 @@ export default {
         username: '',
         password: ''
       },
+      forgetpswForm: {
+        pnumber: '',
+        verifycode: '',
+        password: ''
+
+      },
       registerForm: {
         username: '',
         phone: '',
         password: '',
         confirmPassword: ''
+      },
+      phoneLoginForm: {
+        pnumber: '',
+        verifycode: ''
       },
       countdown: 60,
       isCountingDown: false,
@@ -136,6 +190,157 @@ export default {
     }
   },
   methods: {
+    async sendCode() {
+      if (!this.phoneLoginForm.pnumber) {
+        uni.showToast({
+          title: '请输入手机号',
+          icon: 'none'
+        });
+        return;
+      }
+      try {
+        await apiRequest(`users/sendcode/${this.phoneLoginForm.pnumber}`, 'POST');
+        this.isCountingDown = true;
+        let interval = setInterval(() => {
+          this.countdown--;
+          if (this.countdown === 0) {
+            clearInterval(interval);
+            this.isCountingDown = false;
+            this.countdown = 60;
+          }
+        }, 1000);
+      }
+      catch (error) {
+        console.error('发送验证码失败:', error);
+        uni.showToast({
+          title: '发送验证码失败',
+          icon: 'none'
+        });
+      }
+    },
+    async sendForgotCode() {
+      if (!this.forgetpswForm.pnumber) {
+        uni.showToast({
+          title: '请输入手机号',
+          icon: 'none'
+        });
+        return;
+      }
+      try {
+        await apiRequest(`users/sendforgetpasswordcode/${this.forgetpswForm.pnumber}`, 'POST');
+        this.isCountingDown = true;
+        let interval = setInterval(() => {
+          this.countdown--;
+          if (this.countdown === 0) {
+            clearInterval(interval);
+            this.isCountingDown = false;
+            this.countdown = 60;
+          }
+        }, 1000);
+      }
+      catch (error) {
+        console.error('发送验证码失败:', error);
+        uni.showToast({
+          title: '发送验证码失败',
+          icon: 'none'
+        });
+      }
+    },
+    async handleForgotPassword() {
+      if (!this.forgetpswForm.pnumber || !this.forgetpswForm.verifycode || !this.forgetpswForm.password || !this.forgetpswForm.confirmPassword) {
+        uni.showToast({
+          title: '请填写完整信息',
+          icon: 'none'
+        });
+        return;
+      }else if(this.forgetpswForm.password !== this.forgetpswForm.confirmPassword) {
+        uni.showToast({
+          title: '密码不匹配',
+          icon: 'none'
+        })
+        return;
+      }else{
+        try{
+          await apiRequest(`users/resetpassword`, 'POST', {
+            pnumber: this.forgetpswForm.pnumber,
+            code: this.forgetpswForm.verifycode,
+            password: this.forgetpswForm.password
+          })
+          uni.showToast({
+            title: '修改成功',
+            icon: 'success'
+          });
+          setTimeout(() => {
+            uni.navigateTo({ url: '/pages/login/login' });
+          }, 1000);
+        }catch (error) {
+          console.error('修改密码失败:', error);
+          uni.showToast({
+            title: '修改密码失败',
+            icon: 'none'
+          });
+        }
+      }
+    },
+    async handleVeryifyCodeLogin() {
+      if (!this.phoneLoginForm.pnumber || !this.phoneLoginForm.verifycode) {
+        uni.showToast({
+          title: '请填写完整登录信息',
+          icon: 'none'
+        });
+        return;
+      }
+      try {
+        const response = await apiRequest(`users/loginbycode`, 'POST',{
+          pnumber: this.phoneLoginForm.pnumber,
+          verifycode: this.phoneLoginForm.verifycode
+        });
+        if (response) {
+          // 存储登录状态和用户信息
+          uni.setStorageSync('token', 'mock_token'); // 这里可以替换为实际的 token
+          uni.setStorageSync('userInfo', {
+            id: response.id, // 这里可以替换为实际的用户 ID
+            username:response.username,
+            role:response.role,
+            nickname:response.nickname,
+            createdAt: response.createdAt, // 这里可以替换为实际的创建时间
+            updatedAt:response.updatedAt,
+            avatar:response.avatar
+          });
+          
+          // 显示登录成功提示
+          uni.showToast({
+            title: '登录成功',
+            icon: 'success',
+            duration: 1500
+          });
+          // 当用户在单选框选择了管理员时，跳转到管理员界面
+          if(response.role == "admin" && this.radioval==1){
+            uni.reLaunch({
+              url: '/pages/admin/dashboard'
+            });
+          }else{
+            uni.reLaunch({
+              url: '/pages/index/index'
+            });
+          }
+          
+        }else{
+          uni.showToast({
+            title: '用户名或密码错误',
+            icon: 'error',
+            duration: 1500
+          });
+        }
+      }
+      catch (error) {
+        console.error('登录失败', error);
+        uni.showToast({
+          title: '登录失败',
+          icon: 'none'
+        });
+      }
+    },
     handleRoleChange(value) {
       console.log(value.detail.value);
       this.radioval = value.detail.value
@@ -242,6 +447,7 @@ export default {
         });
     },
     forgotPassword() {
+      
       // TODO: 实现忘记密码逻辑
       uni.showToast({
         title: '忘记密码功能开发中',
@@ -269,7 +475,7 @@ export default {
       try {
         const response = await apiRequest('users/register', 'post', {
           username: this.registerForm.username,
-          phone: this.registerForm.phone,
+          pnumber: this.registerForm.phone,
           password: this.registerForm.password
         });
         

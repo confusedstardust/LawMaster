@@ -8,21 +8,18 @@
     >
       <!-- 作者信息 -->
       <view class="author-info">
-        <image class="avatar" :src="postDetail.userAvatar"></image>
+        <image class="avatar" :src="userdetailsinfo.userAvatar"></image>
         <view class="author-detail">
-          <text class="nickname">{{ postDetail.username }}</text>
-          <text class="time">{{formatDate( postDetail.createdAt )}}</text>
+          <text class="nickname">{{ userdetailsinfo.username }}</text>
+          
         </view>
-        <button class="follow-btn" @click="handleFollow">
-          {{ postDetail.isFollowed ? '已关注' : '关注' }}
-        </button>
       </view>
 
       <!-- 帖子标题和内容 -->
       <view class="post-detail">
         <text class="title">{{ postDetail.title }}</text>
         <br/>
-        <text class="content">{{ postDetail.content }}</text>
+        <text class="content" v-html="postDetail.content"></text>
       </view>
 
       <!-- 图片或视频展示 -->
@@ -39,14 +36,14 @@
             </swiper-item>
           </swiper>
         </block>
-        <video 
+        <!-- <video 
           v-if="postDetail.type === 'video'"
           :src="postDetail.video"
           class="post-video"
           object-fit="cover"
-        ></video>
+        ></video> -->
       </view>
-
+      <text class="time">{{formatDate( postDetail.createdAt )}}</text>
       <!-- 话题标签 -->
       <view class="topic-tags">
         <text 
@@ -88,7 +85,7 @@
               <text class="comment-time">{{ formatDate(comment.createdAt) }}</text>
             </view>
             <text class="comment-text">{{ comment.content }}</text>
-            
+<!--             
             <view class="comment-footer">
               <text class="reply-btn" @click="replyComment(comment)">
                 <uni-icons type="chatbubble" size="24"></uni-icons>
@@ -102,7 +99,7 @@
                 ></uni-icons>
                 {{ comment.likes }}
               </text>
-            </view>
+            </view> -->
             <!-- 回复列表 -->
             <view 
               class="reply-list" 
@@ -198,6 +195,10 @@ export default {
         isCollected: false,
         comments: []
       },
+      userdetailsinfo: {
+        userAvatar: '',
+        username: '',
+      },
       comments: [],
       userInfo: {},
     }
@@ -205,6 +206,9 @@ export default {
 onLoad(options) {
   this.postId = options.id;
   this.comments = JSON.parse(options.comments || "[]"); // 从参数中获取评论信息
+  this.userdetailsinfo.userAvatar = options.userAvatar;
+  this.userdetailsinfo.username = options.username;
+  // console.log(this.userdetailsinfo);
 
   // 异步加载评论的用户信息
   this.loadComments();
@@ -496,7 +500,11 @@ async loadComments() {
 .time {
   font-size: 24rpx;
   color: #999;
-  margin-top: 6rpx;
+  margin-top: 0rpx;
+  position: absolute;
+  right: 0;
+  margin-right: 10rpx;
+  
 }
 
 .follow-btn {

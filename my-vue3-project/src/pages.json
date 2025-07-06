@@ -3,7 +3,9 @@
 		"autoscan": true,
 		"custom": {
 			"^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue",
-			"^u-charts": "@qiun/ucharts"
+			"^u-charts": "@qiun/ucharts",
+			"^NavBar$": "@/components/NavBar.vue",
+			"^RichEditor$": "@/components/Richtext.vue"
 		}
 	},
 	"pages": [
@@ -46,9 +48,29 @@
 			}
 		},
 		{
+			"path": "pages/admin/categoryManagement",
+			"style": {
+				"navigationBarTitleText": "类型管理"
+			}
+		},
+		{
 			"path": "pages/index/index",
 			"style": {
 				"navigationBarTitleText": "首页",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/index/articleList",
+			"style": {
+				"navigationBarTitleText": "列表",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/index/chater",
+			"style": {
+				"navigationBarTitleText": "AI问答",
 				"enablePullDownRefresh": true
 			}
 		},
@@ -113,6 +135,16 @@
 			"path": "pages/profile/my-likes",
 			"style": {
 				"navigationBarTitleText": "我的点赞"
+			}
+		},{
+			"path": "pages/profile/my-comments",
+			"style": {
+				"navigationBarTitleText": "我的评论"
+			}
+		},{
+			"path": "pages/profile/changepassword",
+			"style": {
+				"navigationBarTitleText": "更改密码"
 			}
 		},
 		{

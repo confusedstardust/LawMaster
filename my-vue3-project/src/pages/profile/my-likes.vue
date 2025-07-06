@@ -70,6 +70,9 @@ export default {
   mounted() {
     this.fetchLikedPosts();
   },
+  onShow() {
+    this.fetchLikedPosts();
+  },
   methods: {
     async fetchLikedPosts() {
       const userId = uni.getStorageSync('userInfo').id; // 获取用户ID
@@ -84,14 +87,16 @@ export default {
           });
 
           const commentsCount = await this.fetchComments(post.id); // 获取评论数量
+          const info = await this.getUserInfo(post.userId);
+          const userNickName = info.nickname;
 
           return {
             id: post.id,
             title: post.title,
             content: post.content,
             images: imagesUrls,
-            userAvatar: post.Avatar,
-            username: '用户' + post.userId,
+            userAvatar: `http://localhost:8080/files/download/${info.avatar}`,
+            username: userNickName,
             likes: post.likes,
             comments: commentsCount, // 存储评论数量
             isLiked: false
@@ -100,6 +105,15 @@ export default {
 
       } catch (error) {
         console.error('获取点赞帖子失败:', error);
+      }
+    },
+    async getUserInfo(id){
+      try {
+        const response = await apiRequest(`users/info/${id}`, 'get');
+        return response
+      } catch (error) {
+        console.error('获取用户昵称失败:', error);
+        return '';
       }
     },
     
@@ -114,6 +128,7 @@ export default {
     },
 
     navigateToPost(postId, comments) {
+      const addViewsResponse = apiRequest(`posts/addviews/${postId}`, 'post');
       uni.navigateTo({
         url: `/pages/community/post-detail?id=${postId}&comments=${JSON.stringify(comments)}`
       });

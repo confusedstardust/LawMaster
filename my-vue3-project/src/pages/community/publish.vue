@@ -4,7 +4,8 @@
       <input type="text" v-model="title" placeholder="请输入标题" class="input-title" />
     </view>
     <view class="input-group">
-      <textarea v-model="content" placeholder="请输入内容" class="input-content" @input="handleInput" />
+      <!-- <textarea v-model="content" placeholder="请输入内容" class="input-content" @input="handleInput"maxlength="1000" /> -->
+      <RichEditor :value="content" @input="handleInput"/>
       <view class="tags-container">
         <view class="tag" v-for="(tag, index) in tags" :key="index">
           {{ tag }}
@@ -22,10 +23,7 @@
   </view>
 </template>
 
----
 
-### **`script` 部分**
-```javascript
 <script>
 import { apiRequest } from '@/utils/api'; // 引入 API 请求方法
 
@@ -56,10 +54,11 @@ export default {
     },
 
     // 处理标签提取
-    handleInput() {
+    handleInput(e) {
       const tagPattern = /#([\u4e00-\u9fa5\w]+)/g; // 匹配 #标签
       const matches = this.content.match(tagPattern);
       this.tags = matches ? matches.map(tag => tag.substring(1)) : []; // 提取标签
+      this.content = e;
     },
 
     removeTag(index) {
@@ -114,11 +113,48 @@ export default {
       }
     },
 
+    async checkSensitiveFromFile(text) {
+  try {
+    const res = await new Promise((resolve, reject) => {
+      uni.request({
+        url: '/static/Sensitive.txt',
+        method: 'GET',
+        success: resolve,
+        fail: reject
+      });
+    });
+
+    // 将文件内容按行分割成数组并去除空白行
+    const wordList = res.data
+      .split(/\r?\n/)
+      .map(word => word.trim())
+      .filter(word => word);
+
+    // 检查是否有敏感词
+    const matched = wordList.filter(word => text.includes(word));
+    return matched.length > 0 ? matched : null;
+  } catch (err) {
+    console.error('读取敏感词库失败', err);
+    return null; // 或考虑直接通过校验
+  }
+},
+
+
     // 先上传图片，然后提交帖子信息
     async submitPost() {
-      if (!this.title || !this.content) {
+      const [titleBad, contentBad] = await Promise.all([
+      this.checkSensitiveFromFile(this.title),
+      this.checkSensitiveFromFile(this.content)
+    ]);
+      if (!this.title || !this.content ) {
         uni.showToast({
           title: '标题和内容不能为空',
+          icon: 'none'
+        });
+        return;
+      }else if(titleBad || contentBad) {
+        uni.showToast({
+          title: '标题和内容含有敏感词',
           icon: 'none'
         });
         return;

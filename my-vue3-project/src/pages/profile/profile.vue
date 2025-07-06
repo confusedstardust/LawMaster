@@ -6,13 +6,9 @@
         <image class="avatar" :src="userInfo.avatar || '/static/default-avatar.png'" @click="changeAvatar"></image>
         <view class="info-content">
           <text class="nickname">{{ userInfo.nickname || '未设置昵称' }}</text>
-          <text class="user-id">用户名: {{ userInfo.username || '未设置用户名' }}</text>
+          <!-- <text class="user-id">用户名: {{ userInfo.username || '未设置用户名' }}</text> -->
           <text class="user-role">角色: {{ userInfo.role || '未设置角色' }}</text>
         </view>
-      </view>
-      <view class="edit-btn" @click="navigateTo('/pages/profile/edit')">
-        <text class="iconfont icon-edit"></text>
-        编辑资料
       </view>
     </view>
     
@@ -20,21 +16,19 @@
     <!-- 功能菜单 -->
     <view class="menu-list">
       <view class="menu-group">
-        <view class="menu-item" @click="navigateTo('/pages/profile/my-likes')">
-          <uni-icons type="heart-filled" size="30" color="#007AFF"></uni-icons>
-          <text class="menu-text">我的点赞</text>
+        <NavBar :navList="navList" @navClick="onNavClick" />
+      </view>
+      <view class="menu-group">
+        <view class="menu-item" @click="navigateTo('/pages/profile/edit')">
+          <uni-icons type="compose" size="30" color="#007AFF"></uni-icons>
+          <text class="menu-text">编辑资料</text>
           <uni-icons type="right" size="24" color="#999"></uni-icons>
         </view>
-        <view class="menu-item" @click="navigateTo('/pages/profile/my-collections')">
-          <uni-icons type="star-filled" size="30" color="#007AFF"></uni-icons>
-          <text class="menu-text">我的收藏</text>
+        <view class="menu-item" @click="navigateTo('/pages/profile/changepassword')">
+          <uni-icons type="locked-filled" size="30" color="#007AFF"></uni-icons>
+          <text class="menu-text">修改密码</text>
           <uni-icons type="right" size="24" color="#999"></uni-icons>
         </view>
-        <!-- <view class="menu-item" @click="navigateTo('/pages/profile/notify')">
-          <uni-icons type="notification-filled" size="30" color="#007AFF"></uni-icons>
-          <text class="menu-text">我的通知</text>
-          <uni-icons type="right" size="24" color="#999"></uni-icons>
-        </view> -->
       </view>
 
       <view class="menu-group">
@@ -63,6 +57,7 @@
 
 <script>
 import { apiRequest } from '@/utils/api';
+import NavBar from '@/components/NavBar.vue'; // 引入导航按钮组件
 
 export default {
   data() {
@@ -72,7 +67,12 @@ export default {
         nickname: '',
         username: '',
         role: ''
-      }
+      },
+      navList: [
+        { title: '点赞', icon: 'hand-up-filled' },
+        { title: '评论', icon: 'chatboxes-filled' },
+        { title: '收藏', icon: 'mail-open-filled' }
+      ]
     }
   },
   mounted() {
@@ -88,7 +88,21 @@ export default {
       }; // 更新 userInfo
     }
   },
+  onShow() {
+    // 从本地存储中获取用户信息
+    const storedUserInfo = uni.getStorageSync('userInfo');
+    if (storedUserInfo) {
+      this.userInfo = {
+        avatar: "http://localhost:8080/files/download/"+storedUserInfo.avatar, // 获取用户头像storedUserInfo.avatar,
+        nickname: storedUserInfo.nickname,
+        username: storedUserInfo.username,
+        role: storedUserInfo.role,
+        id:storedUserInfo.id
+      }; // 更新 userInfo
+    }
+  },
   methods: {
+    
     navigateTo(url) {
       uni.navigateTo({
         url
@@ -148,27 +162,46 @@ export default {
           }
         }
       })
+    },
+    onNavClick(index) {
+      switch (this.navList[index].title) {
+        case "点赞":
+        uni.navigateTo({
+        url: '/pages/profile/my-likes'
+    });
+          break;
+        case "收藏":
+        uni.navigateTo({
+        url: '/pages/profile/my-collections'
+        })
+          break;
+        case "评论":
+        uni.navigateTo({
+        url: '/pages/profile/my-comments'
+        })
+          break;
+        
+      }
+      console.log("点击了导航按钮：", this.navList[index].title);
     }
   }
 }
 </script>
 
 <style>
-.profile-container {
-  min-height: 100vh;
-  background-color: #f5f5f5;
-}
-
 .user-header {
   background-color: #fff;
   padding: 40rpx 30rpx;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column; /* 使子元素垂直排列 */
+  justify-content: center;
   align-items: center;
+  text-align: center; /* 让文本也居中 */
 }
 
 .user-info {
   display: flex;
+  flex-direction: column; /* 使头像和文本信息垂直排列 */
   align-items: center;
 }
 
@@ -176,12 +209,13 @@ export default {
   width: 120rpx;
   height: 120rpx;
   border-radius: 60rpx;
-  margin-right: 30rpx;
+  margin-bottom: 20rpx; /* 让头像和昵称之间有间距 */
 }
 
 .info-content {
   display: flex;
   flex-direction: column;
+  align-items: center; /* 确保文本信息也居中 */
 }
 
 .nickname {
@@ -191,16 +225,10 @@ export default {
   margin-bottom: 10rpx;
 }
 
-.user-id {
-  font-size: 24rpx;
-  color: #999;
-}
-
 .user-role {
   font-size: 24rpx;
   color: #999;
 }
-
 .edit-btn {
   padding: 10rpx 20rpx;
   border: 1rpx solid #ddd;

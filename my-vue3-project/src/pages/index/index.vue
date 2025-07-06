@@ -11,25 +11,102 @@
     
     <!-- 轮播图区域 -->
     <swiper class="banner" :indicator-dots="true" :autoplay="true">
-      <swiper-item v-for="(item, index) in bannerList" :key="index" @click="navigateToPost('rotat', item.id)">
+      <swiper-item v-for="(item, index) in bannerList" :key="index" @click="navigateToPost(item.id,item.userId)">
         <image :src="item.images" mode="aspectFill"></image>
         <view class="banner-title">{{ item.title }}</view>
       </swiper-item>
     </swiper>
 
+
+     <!-- 导航按钮组件 -->
+     <NavBar :navList="navList" @navClick="onNavClick" />
+
     <!-- 分类标签页 -->
     <view class="tab-header">
+      <view 
+        class="tab-item" 
+        :class="{ active: currentTab === 'news' }"
+        @click="switchTab('news')"
+      >法律新闻</view>
+      <view 
+        class="tab-item" 
+        :class="{ active: currentTab === 'cases' }"
+        @click="switchTab('cases')"
+      >法律案例</view>
       <view 
         class="tab-item" 
         :class="{ active: currentTab === 'knowledge' }"
         @click="switchTab('knowledge')"
       >法律知识</view>
-      <view 
-        class="tab-item" 
-        :class="{ active: currentTab === 'news' }"
-        @click="switchTab('news')"
-      >新闻动态</view>
+      
+     
     </view>
+
+
+    <!-- 新闻动态列表 -->
+    <scroll-view 
+      v-if="currentTab === 'news'" 
+      scroll-y 
+      class="content-list"
+      @scrolltolower="loadMore"
+      refresher-enabled
+      :refresher-triggered="isRefreshing"
+      @refresherrefresh="onRefresh"
+    >
+      <view class="content-item" v-for="item in newsList" :key="item.id" @click="navigateToDetail('news', item.id)">
+        <view class="item-main">
+          <view class="item-info">
+            <text class="item-title">{{item.title}}</text>
+          </view>
+          <image v-if="item.cover" :src="item.cover" mode="aspectFill" class="item-image"></image>
+        </view>
+        <view class="item-footer">
+          <view class="item-source">{{item.source}}</view>
+          <view class="item-stats">
+            
+            <text class="stats-item">
+              <text class="iconfont icon-view"></text>
+              {{item.views}}
+            </text>
+          </view>
+          <text class="item-time">{{item.time}}</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    
+    <!-- 案例 -->
+    <scroll-view 
+          v-if="currentTab === 'cases'" 
+          scroll-y 
+          class="content-list"
+          @scrolltolower="loadMore"
+          refresher-enabled
+          :refresher-triggered="isRefreshing"
+          @refresherrefresh="onRefresh"
+        >
+          <view class="content-item" v-for="item in casesList" :key="item.id" @click="navigateToDetail('cases', item.id)">
+            <view class="item-main">
+              <view class="item-info">
+                <text class="item-title">{{item.title}}</text>
+              </view>
+              <image v-if="item.cover" :src="item.cover" mode="aspectFill" class="item-image"></image>
+            </view>
+            <view class="item-footer">
+              <view class="item-stats">
+                <text class="stats-item">
+                  <uni-icons 
+                          :type="'eye'" 
+                          size="16" 
+                        ></uni-icons>
+                  <text class="iconfont icon-view"></text>
+                  {{item.views}}
+                </text>
+              </view>
+              <text class="item-time">{{item.time}}</text>
+            </view>
+          </view>
+        </scroll-view>
 
     <!-- 法律知识列表 -->
     <scroll-view 
@@ -64,36 +141,7 @@
       </view>
     </scroll-view>
 
-    <!-- 新闻动态列表 -->
-    <scroll-view 
-      v-if="currentTab === 'news'" 
-      scroll-y 
-      class="content-list"
-      @scrolltolower="loadMore"
-      refresher-enabled
-      :refresher-triggered="isRefreshing"
-      @refresherrefresh="onRefresh"
-    >
-      <view class="content-item" v-for="item in newsList" :key="item.id" @click="navigateToDetail('news', item.id)">
-        <view class="item-main">
-          <view class="item-info">
-            <text class="item-title">{{item.title}}</text>
-          </view>
-          <image v-if="item.cover" :src="item.cover" mode="aspectFill" class="item-image"></image>
-        </view>
-        <view class="item-footer">
-          <view class="item-source">{{item.source}}</view>
-          <view class="item-stats">
-            
-            <text class="stats-item">
-              <text class="iconfont icon-view"></text>
-              {{item.views}}
-            </text>
-          </view>
-          <text class="item-time">{{item.time}}</text>
-        </view>
-      </view>
-    </scroll-view>
+
 
     <!-- 模态框 -->
     <scroll-view>
@@ -141,6 +189,7 @@
 
 <script>
 import { apiRequest } from '@/utils/api'; // 引入 API 请求方法
+import NavBar from '@/components/NavBar.vue'; // 引入导航按钮组件
 
 export default {
   data() {
@@ -153,22 +202,38 @@ export default {
       searchKeyword: '',
       filteredKnowledgeList: [],
       filteredNewsList: [],
+      casesList: [],
       isModalVisible: false, // 控制模态框的显示
-      selectedItem: {} // 存储选中的项目
+      selectedItem: {}, // 存储选中的项目
+      navList: [
+        { title: "法律新闻", icon: "map-filled" },
+        { title: "法律案例", icon: "wallet-filled" },
+        { title: "法律知识", icon: "email-filled" },
+        { title: "智能问答", icon: "headphones" }
+      ],
     }
   },
   created() {
     this.fetchBannerList(); // 在组件创建时获取轮播图数据
     this.fetchArticles(); // 获取法律知识和新闻数据
-  },
+  },onShow(){
+      this.fetchBannerList(); // 在组件创建时获取轮播图数据
+    this.fetchArticles(); // 获取法律知识和新闻数据
+    },
   methods: {
     async fetchBannerList() {
       try {
-const response = await apiRequest('posts/tag/rotat', 'get'); // 获取轮播图数据
-
+const response = await apiRequest('posts/top', 'get'); // 获取轮播图数据
+      let parsedImages = [];
+      
       this.bannerList = response.map(item => {
-        const parsedImages = Array.isArray(item.images) ? item.images : JSON.parse(item.images);
-
+       try {
+        parsedImages = Array.isArray(item.images) ? item.images: JSON.parse(item.images)||[];
+       }
+       catch (error) {
+         console.error("解析封面图失败", error);
+       }
+       
         return {
           ...item,
           images: parsedImages.length > 0 
@@ -190,7 +255,7 @@ const response = await apiRequest('posts/tag/rotat', 'get'); // 获取轮播图�
         const response = await apiRequest('articles/all', 'get'); // 获取法律知识和新闻数据
         const articles = response.filter(article => article.visible === 1); // 过滤可见的文章
 
-        this.knowledgeList = articles.filter(article => article.type === '知识').map(article => ({
+        this.knowledgeList = articles.filter(article => article.type === '知识'&&article.visible === 1 ).map(article => ({
           id: article.id,
           title: article.title,
           description: article.content,
@@ -200,12 +265,16 @@ const response = await apiRequest('posts/tag/rotat', 'get'); // 获取轮播图�
           time: new Date(article.createdAt).toLocaleString() // 格式化时间
         }));
 
-        this.newsList = articles.filter(article => article.type === '新闻').map(article => ({
+        this.newsList = articles.filter(article => article.type === '新闻' && article.visible === 1).map(article => ({
           id: article.id,
           title: article.title,
           description: article.content,
           source: article.source || '未知',
           time: new Date(article.createdAt).toLocaleString() // 格式化时间
+        }));
+
+        this.casesList = articles.filter(a => a.type === "案例" && a.visible === 1).map(a => ({
+          id: a.id, title: a.title,views: a.views, description: a.content, time: new Date(a.createdAt).toLocaleString()
         }));
       } catch (error) {
         console.error("获取文章失败", error);
@@ -213,6 +282,22 @@ const response = await apiRequest('posts/tag/rotat', 'get'); // 获取轮播图�
           title: '获取文章失败，请重试',
           icon: 'none'
         });
+      }
+    },async fetchComments(postId) {
+      try {
+        const response = await apiRequest(`comments/post/${postId}`, 'get');
+        return response
+      } catch (error) {
+        console.error('获取评论失败:', error);
+        return 0; // 如果失败，返回 0
+      }
+    },async getUserInfo(id){
+      try {
+        const response = await apiRequest(`users/info/${id}`, 'get');
+        return response
+      } catch (error) {
+        console.error('获取用户昵称失败:', error);
+        return '';
       }
     },
     searchArticles() {
@@ -237,6 +322,31 @@ const response = await apiRequest('posts/tag/rotat', 'get'); // 获取轮播图�
         this.filteredKnowledgeList = this.knowledgeList;
         this.filteredNewsList = this.newsList;
       }
+    },onNavClick(index) {
+      switch (this.navList[index].title) {
+        case "法律新闻":
+        uni.navigateTo({
+        url: `/pages/index/articleList?pagetitle=法律新闻`
+      });
+        break;
+        case "法律案例":
+        uni.navigateTo({
+        url: `/pages/index/articleList?pagetitle=法律案例`
+      });
+        break;
+        case "法律知识":
+        uni.navigateTo({
+        url: `/pages/index/articleList?pagetitle=法律知识`
+      });
+        break;
+        case "智能问答":
+        uni.navigateTo({
+        url: `/pages/index/chater`
+      });
+        break;
+        
+      }
+      console.log("点击了导航按钮：", this.navList[index].title);
     },
     switchTab(tab) {
       this.currentTab = tab
@@ -249,33 +359,41 @@ const response = await apiRequest('posts/tag/rotat', 'get'); // 获取轮播图�
       await new Promise(resolve => setTimeout(resolve, 1000))
       this.isRefreshing = false
     },
-    navigateToDetail(type, id) {
-      const list = type === 'knowledge' ? this.knowledgeList : this.newsList;
+    async navigateToDetail(type, id) {
+      const list = [...this.knowledgeList, ...this.newsList, ...this.casesList];
       const article = list.find(item => item.id === id);
-      
+      const res= await apiRequest(`articles/addviews/${id}`, 'post');
+
       uni.navigateTo({
         url: `/pages/index/articleDetails?article=${JSON.stringify(article)}`
       });
     },
-    navigateToSearchDetail( id) {
+    nav() {
+
+        uni.navigateTo({
+        url: `/pages/index/chater`
+      });
+    },
+    async navigateToSearchDetail( id) {
       // const list = type === 'knowledge' ? this.knowledgeList : this.newsList;
       const article = this.filteredKnowledgeList.find(item => item.id === id);
-      
+      const res= await apiRequest(`articles/addviews/${id}`, 'post');
       uni.navigateTo({
         url: `/pages/index/articleDetails?article=${JSON.stringify(article)}`
       });
     },
-    navigateToPost(type, id) {
-      console.log(id)
+   async navigateToPost(id,userId) {
+      let commentsCount,info,userNickName,userAvatar;
+        commentsCount = await this.fetchComments(id);
+        info = await this.getUserInfo(userId);
+        userNickName = info.nickname;
+        userAvatar=  `http://localhost:8080/files/download/${info.avatar} `;
       uni.navigateTo({
         // url: `/posts/${id}`
-        url: `/pages/community/post-detail?id=${id}`
+        url: `/pages/community/post-detail?id=${id}&comments=${JSON.stringify(commentsCount)}&userAvatar=${userAvatar}&username=${userNickName}`
       })
     }
     ,
-    onShow:function(){
-    console.log("ssada")
-    },
     showModal() {
       this.isModalVisible = true; // 显示模态框
     },
@@ -492,4 +610,32 @@ const response = await apiRequest('posts/tag/rotat', 'get'); // 获取轮播图�
 .modal button:hover {
   background-color: #0056b3;
 }
+
+.add-button {
+  position: fixed;
+  right: 30rpx;
+  bottom: 100rpx;
+  width: 100rpx;
+  height: 100rpx;
+  background-color: #2979ff;
+  /* color:#0056b3; */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+  z-index: 999;
+}
+
 </style>
+<!-- .popup-btn {
+  min-width: 160rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 36rpx;
+  font-size: 28rpx;
+  color: #fff;
+  border: none;
+  transition: all 0.3s ease;
+  background-color: #2979ff;
+} -->

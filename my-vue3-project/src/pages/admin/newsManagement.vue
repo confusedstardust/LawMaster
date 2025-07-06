@@ -1,3 +1,5 @@
+
+
 <template>
   <view class="news-management">
     <uni-card title="新闻/知识/案例管理" is-full>
@@ -56,45 +58,63 @@
     </uni-card>
 
     <!-- 🔹 新闻详情弹出框 -->
-    <uni-popup ref="popup" type="center">
+    <uni-popup ref="editFormPopup" type="center">
       <view class="popup-container">
         
         <!-- 🔹 标题 -->
         <view class="popup-header">
-          <text class="popup-title">{{ selectedNews.title }}</text>
+          <text class="popup-title" v-if="editable===false" >{{ selectedNews.title }}</text>
         </view>
 
         <!-- 🔹 内容（固定高度 + 滚动条） -->
         <view class="popup-body">
-          <text class="popup-content" v-html="selectedNews.content"></text>
+          <text class="popup-content" v-if="editable===false" v-html="selectedNews.content"></text>
         </view>
-        <!-- <template class="popup-body" v-if="selectedNews.isEditing">
-        <uni-easyinput v-model="selectedNews.title" placeholder="请输入标题"/>
-      </template>
-      <template v-else>
-        <view class="popup-header">
-          <text class="popup-title">{{ selectedNews.title }}</text>
-        </view>
-      </template>
-      
-        <template class="popup-body" v-if="selectedNews.isEditing">
-        <editor
-          class="rich-editor"
-          :value="selectedNews.content"
-          @input="handleEditorInput"
-          placeholder="请输入内容"
-        />
-      </template>
-      <template v-else>
-        <view class="popup-body">
-          <text class="popup-content" v-html="selectedNews.content"></text>
-        </view>
-      </template> -->
+
+        <uni-forms v-if="editable" ref="editForm" :model="selectedNews">
+        <uni-forms-item label="标题" required>
+          <uni-easyinput v-model="selectedNews.title" placeholder="请输入标题"/>
+        </uni-forms-item>
+        
+        <uni-forms-item label="类型" required>
+          <uni-data-select
+            v-model="selectedNews.type"
+            :localdata="typeOptions"
+            placeholder="请选择类型"
+          />
+        </uni-forms-item>
+
+        <uni-forms-item label="法系" required>
+          <uni-data-select
+            v-model="selectedNews.categoryId"
+            :localdata="categoryList.map(item => ({
+              value: item.id,
+              text: item.name
+            }))"
+            placeholder="请选择法系"
+          />
+        </uni-forms-item>
+
+        <uni-forms-item label="内容" required>
+          <editor id="editor" class="ql-container" placeholder="开始输入..." show-img-size show-img-toolbar
+						show-img-resize  @ready="onEditorReady" @input="onEditorInput" >
+					</editor>
+          
+        </uni-forms-item>
+        
+      </uni-forms>
 
         <!-- 🔹 操作按钮 -->
         <view class="popup-actions">
           <button class="popup-btn delete" @click="handleDeleteNews">删除新闻</button>
-          <button class="popup-btn highlight" @click="handleSetAsHeadline">设为头条</button>
+          <button 
+            class="popup-btn highlight" 
+            @click="toggleCarousel()"
+          >
+            {{ selectedNews.visible === 1 ? '取消推荐' : '设为推荐' }}
+          </button>
+          <button class="popup-btn highlight" @click="editContent" v-if="!editable">编辑内容</button>
+          <button class="popup-btn highlight" @click="saveAndSubmit" v-if="editable" >确定</button>
           <!-- <button class="popup-btn highlight" @click="toggleEditMode"> {{ selectedNews.isEditing ? '确定' : '编辑' }}</button> -->
         </view>
 
@@ -139,13 +159,15 @@
             </uni-forms-item>
 
             <uni-forms-item label="内容" required>
-              <editor
+              <!-- <editor
                 class="rich-editor"
                 :value="formData.content"
                 @input="handleEditorInput"
                 placeholder="请输入内容"
-              />
+              /> -->
+              
             </uni-forms-item>
+            <RichEditor :value="formData.content" @input="handleEditorInput"/>
           </uni-forms>
         </view>
 
@@ -160,10 +182,14 @@
 
 <script>
 import { apiRequest } from '@/utils/api';
-
+import RichEditor from '@/components/Richtext.vue';
 export default {
+  components: {
+    RichEditor
+  },
   data() {
     return {
+      editable: false,
       loading: false,
       searchQuery: '',
       newsData: [], // 存储所有新闻数据
@@ -227,7 +253,38 @@ export default {
       } finally {
         this.loading = false;
       }
-    },
+    },onEditorReady() {
+  // #ifdef MP-BAIDU
+  this.editorCtx = requireDynamicLib('editorLib').createEditorContext('editor');
+  // #endif
+
+  // #ifdef APP-PLUS || MP-WEIXIN || H5
+  uni.createSelectorQuery()
+    .select('#editor')
+    .context((res) => {
+      if (res && res.context) {
+        this.editorCtx = res.context;
+        // 🔹 这里正确地设置 HTML 内容
+        this.editorCtx.setContents({
+          html: this.selectedNews.content
+        });
+      }
+    }).exec();
+  // #endif
+},
+async toggleCarousel(){
+  if (!this.selectedNews.id) return;
+  try {
+    await apiRequest(`http://localhost:8080/articles/visible/${this.selectedNews.id}/${this.selectedNews.visible === 1 ? 0 : 1}`, 'POST', {
+      visible: this.selectedNews.visible === 1 ? 0 : 1
+    });
+    this.fetchNews();
+    uni.showToast({ title: "操作成功", icon: "success" });
+    this.$refs.editFormPopup.close();
+  } catch (error) {
+    console.error("切换轮播贴失败:", error);
+
+}},
     formatDate(dateString) {
       // 预处理字符串，去掉最后的 " 00:00"
       const cleanedDateString = dateString.replace(" 00:00", "");
@@ -241,7 +298,7 @@ export default {
       const day = String(date.getDate()).padStart(2, "0");
 
       return `${year}-${month}-${day}`;
-    },
+    },  
     filterNews() {
       this.fetchNews();
     },
@@ -249,8 +306,9 @@ export default {
       this.currentPage = event.current;
     },
     showPopup(newsItem) {
+      this.editable=false;
       this.selectedNews = newsItem;
-      this.$refs.popup.open();
+      this.$refs.editFormPopup.open();
     },
     getCategoryById(id){
       const categoryVal=this.categoryList.filter(item=>item.id==id)
@@ -264,22 +322,14 @@ export default {
         this.newsData = this.newsData.filter(news => news.id !== this.selectedNews.id);
         this.filteredNews = [...this.newsData];
         uni.showToast({ title: "删除成功", icon: "success" });
-        this.$refs.popup.close();
+        this.$refs.editFormPopup.close();
       } catch (error) {
         console.error("删除新闻失败:", error);
         uni.showToast({ title: "删除失败", icon: "none" });
       }
     },
-    async handleSetAsHeadline() {
-      if (!this.selectedNews.id) return;
-      try {
-        await apiRequest(`news/set-headline/${this.selectedNews.id}`, 'POST');
-        uni.showToast({ title: "已设为头条", icon: "success" });
-        this.$refs.popup.close();
-      } catch (error) {
-        console.error("设为头条失败:", error);
-        uni.showToast({ title: "操作失败", icon: "none" });
-      }
+    async editContent() {
+      this.editable = true;
     },
     showTypeList() {
       const uniqueTypes = [...new Set(this.newsData.map(item => item.type))];
@@ -306,6 +356,7 @@ export default {
       this.filteredNews = [...this.newsData];
     },
     showAddForm() {
+      this.editable = false;
       this.$refs.addFormPopup.open();
     },
     
@@ -324,6 +375,7 @@ export default {
     },
     async submitForm() {
       if (!this.formData.title || !this.formData.type || !this.formData.categoryId || !this.formData.content) {
+        console.log(this.formData);
         uni.showToast({
           title: '请填写完整信息',
           icon: 'none'
@@ -332,7 +384,7 @@ export default {
       }
       
       try {
-        this.formData.content=this.formData.content.detail.html;
+        // this.formData.content=this.formData.content.detail.html;
         await apiRequest('articles', 'POST', this.formData);
         uni.showToast({
           title: '添加成功',
@@ -348,6 +400,41 @@ export default {
         });
       }
     }
+    ,async saveAndSubmit() {
+      if (!this.selectedNews.title || !this.selectedNews.type || !this.selectedNews.categoryId || !this.selectedNews.content) {
+        console.log(this.selectedNews);
+        uni.showToast({
+          title: '请填写完整信息',
+          icon: 'none'
+        });
+        return;
+      }
+      try {
+        // this.selectedNews.content=this.selectedNews.content.detail.html;
+        await apiRequest(`articles/edit`, 'POST', {
+          id: this.selectedNews.id,
+          title: this.selectedNews.title,
+          type: this.selectedNews.type,
+          categoryId: this.selectedNews.categoryId,
+          content: this.selectedNews.content
+        });
+        uni.showToast({
+          title: '保存成功',
+          icon: 'success'
+        });
+        this.$refs.editFormPopup.close();
+        this.fetchNews();
+      } catch (error) {
+        console.error('保存失败:', error);
+        uni.showToast({
+          title: '保存失败',
+          icon: 'none'
+        });
+      }
+    },onEditorInput(event) {
+    console.log("编辑器输入:", event.detail.html);
+    this.selectedNews.content = event.detail.html;
+  }
     ,toggleEditMode() {
     if (this.selectedNews.isEditing) {
       // 如果当前是“确定”状态，提交数据
@@ -358,10 +445,10 @@ export default {
     }
   },
 
-  // 🔹 监听编辑器输入
-  handleEditorInput(e) {
-    this.selectedNews.content = e;
-  },
+  // // 🔹 监听编辑器输入
+  // handleEditorInput(e) {
+  //   this.selectedNews.content = e;
+  // },
 
   // 🔹 提交更新到后端
   async updateNewsContent() {
@@ -578,4 +665,17 @@ export default {
   background-color: #2979ff;
   color: #fff;
 }
+.popup-type {
+  font-size: 28rpx;
+} 
+.ql-container {
+		box-sizing: border-box;
+		padding: 12px 15px;
+		width: 100%;
+		min-height: 30vh;
+		margin-top: 20px;
+		font-size: 16px;
+		line-height: 1.5;
+    border: 1rpx solid #eee;
+	}
 </style>

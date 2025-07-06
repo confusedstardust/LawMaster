@@ -90,11 +90,11 @@ export default {
         this.userAnswers.push(answer);
       }
 
-      // 2 秒后自动跳转下一题
+      // 1 秒后自动跳转下一题
       if (this.nextQuestionTimer) {
   clearTimeout(this.nextQuestionTimer);
 }
-this.nextQuestionTimer = setTimeout(() => this.nextQuestion(), 2000);
+this.nextQuestionTimer = setTimeout(() => this.nextQuestion(), 1000);
 
     },
     nextQuestion() {

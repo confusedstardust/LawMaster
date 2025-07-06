@@ -74,7 +74,7 @@ export default {
     async fetchLikedPosts() {
       const userId = uni.getStorageSync('userInfo').id; // 获取用户ID
       try {
-        const response = await apiRequest(`favorites/queryAllByUserId?userId=${userId}`, 'get');
+        const response = await apiRequest(`comments/queryAllByUserId?userId=${userId}`, 'get');
         const postsResponse = await apiRequest(`posts/postIds?postIds=${response}`, 'get');
         
         this.likedPosts = await Promise.all(postsResponse.map(async post => {
@@ -84,14 +84,16 @@ export default {
           });
 
           const commentsCount = await this.fetchComments(post.id); // 获取评论数量
+          const info = await this.getUserInfo(post.userId);
+          const userNickName = info.nickname;
 
           return {
             id: post.id,
             title: post.title,
             content: post.content,
             images: imagesUrls,
-            userAvatar: post.Avatar,
-            username: '用户' + post.userId,
+            userAvatar: `http://localhost:8080/files/download/${info.avatar}`,
+            username: userNickName,
             likes: post.likes,
             comments: commentsCount, // 存储评论数量
             isLiked: false
@@ -112,8 +114,17 @@ export default {
         return 0; // 如果失败，返回 0
       }
     },
-
+    async getUserInfo(id){
+      try {
+        const response = await apiRequest(`users/info/${id}`, 'get');
+        return response
+      } catch (error) {
+        console.error('获取用户昵称失败:', error);
+        return '';
+      }
+    },
     navigateToPost(postId, comments) {
+      const addViewsResponse = apiRequest(`posts/addviews/${postId}`, 'post');
       uni.navigateTo({
         url: `/pages/community/post-detail?id=${postId}&comments=${JSON.stringify(comments)}`
       });

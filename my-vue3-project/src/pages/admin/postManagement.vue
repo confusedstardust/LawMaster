@@ -51,7 +51,12 @@
         <!-- 🔹 Section 3: 操作按钮 -->
         <view class="popup-actions">
           <button class="popup-btn delete" @click="handleDeletePost">删除帖子</button>
-          <button class="popup-btn carousel" @click="handleSetAsCarousel">设为轮播贴</button>
+          <button 
+            class="popup-btn edit" 
+            @click="handleSetAsCarousel()"
+          >
+            {{ selectedPost.istop === 1 ? '取消轮播' : '设为轮播' }}
+          </button>
         </view>
 
       </view>
@@ -113,19 +118,37 @@ export default {
         }
 
         const response = await apiRequest(apiUrl, 'get');
-        this.tableData = response.map(post => ({
-          id: post.id,
-          title: post.title,
-          content: post.content,
-          userAvatar: post.Avatar,
-          username: '用户' + post.userId,
-          likes: post.likes,
-          createdAt: post.createdAt
-        }));
+            this.tableData = await Promise.all(
+            response.map(async post => {
+              const info = await this.getUserInfo(post.userId);
+              return {
+                id: post.id,
+                title: post.title,
+                content: post.content,
+                userAvatar: post.Avatar,
+                username: info.nickname,
+                likes: post.likes,
+                createdAt: post.createdAt,
+                istop:post.istop
+              };
+            })
+          );
       } catch (error) {
         console.error('获取帖子失败:', error);
       } finally {
         this.loading = false;
+      }
+    },
+    closePopup() {
+      this.$refs.popup.close();
+    },
+    async getUserInfo(id){
+      try {
+        const response = await apiRequest(`users/info/${id}`, 'get');
+        return response
+      } catch (error) {
+        console.error('获取用户昵称失败:', error);
+        return '';
       }
     },
     formatDate(dateString) {
@@ -164,9 +187,10 @@ export default {
     async handleSetAsCarousel() {
       if (!this.selectedPost.id) return;
       try {
-        await apiRequest(`posts/set-carousel/${this.selectedPost.id}`, 'POST');
-        uni.showToast({ title: "已设为轮播贴", icon: "success" });
+        await apiRequest(`posts/settoptoggle/${this.selectedPost.id}`, 'POST');
+        uni.showToast({ title: "已更改", icon: "success" });
         this.$refs.popup.close();
+        this.fetchPosts();
       } catch (error) {
         console.error("设为轮播贴失败:", error);
         uni.showToast({ title: "操作失败", icon: "none" });
