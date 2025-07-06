@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lm.lawmaster.dao.ArticlesDao">
+
+    <resultMap type="com.lm.lawmaster.entity.Articles" id="ArticlesMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="title" column="title" jdbcType="VARCHAR"/>
+        <result property="content" column="content" jdbcType="VARCHAR"/>
+        <result property="categoryId" column="category_id" jdbcType="INTEGER"/>
+        <result property="source" column="source" jdbcType="VARCHAR"/>
+        <result property="views" column="views" jdbcType="INTEGER"/>
+        <result property="likes" column="likes" jdbcType="INTEGER"/>
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+        <result property="visible" column="visible" jdbcType="INTEGER"/>
+        <result property="type" column="type" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!--查询单个-->
+    <select id="queryById" resultMap="ArticlesMap">
+        select id,
+               title,
+               content,
+               category_id,
+               source,
+               views,
+               likes,
+               created_at,
+               visible,
+               type
+        from articles
+        where id = #{id}
+    </select>
+
+    <!--查询指定行数据-->
+    <select id="queryAllByLimit" resultMap="ArticlesMap">
+        select
+        id, title, content, category_id, source, views, likes, created_at, visible, type
+        from articles
+        <where>
+            <if test="id != null">
+                and id = #{id}
+            </if>
+            <if test="title != null and title != ''">
+                and title = #{title}
+            </if>
+            <if test="content != null and content != ''">
+                and content = #{content}
+            </if>
+            <if test="categoryId != null">
+                and category_id = #{categoryId}
+            </if>
+            <if test="source != null and source != ''">
+                and source = #{source}
+            </if>
+            <if test="views != null">
+                and views = #{views}
+            </if>
+            <if test="likes != null">
+                and likes = #{likes}
+            </if>
+            <if test="createdAt != null">
+                and created_at = #{createdAt}
+            </if>
+            <if test="visible != null">
+                and visible = #{visible}
+            </if>
+            <if test="type != null and type != ''">
+                and type = #{type}
+            </if>
+        </where>
+        limit #{pageable.offset}, #{pageable.pageSize}
+    </select>
+
+    <!--统计总行数-->
+    <select id="count" resultType="java.lang.Long">
+        select count(1)
+        from articles
+        <where>
+            <if test="id != null">
+                and id = #{id}
+            </if>
+            <if test="title != null and title != ''">
+                and title = #{title}
+            </if>
+            <if test="content != null and content != ''">
+                and content = #{content}
+            </if>
+            <if test="categoryId != null">
+                and category_id = #{categoryId}
+            </if>
+            <if test="source != null and source != ''">
+                and source = #{source}
+            </if>
+            <if test="views != null">
+                and views = #{views}
+            </if>
+            <if test="likes != null">
+                and likes = #{likes}
+            </if>
+            <if test="createdAt != null">
+                and created_at = #{createdAt}
+            </if>
+            <if test="visible != null">
+                and visible = #{visible}
+            </if>
+            <if test="type != null and type != ''">
+                and type = #{type}
+            </if>
+        </where>
+    </select>
+
+    <!--新增所有列-->
+    <insert id="insert" keyProperty="id" useGeneratedKeys="true">
+        insert into articles(title, content, category_id, source, views, likes, created_at, visible, type)
+        values (#{title}, #{content}, #{categoryId}, #{source}, #{views}, #{likes}, #{createdAt}, #{visible}, #{type})
+    </insert>
+
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into articles(title, content, category_id, source, views, likes, created_at, visible, type)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.title}, #{entity.content}, #{entity.categoryId}, #{entity.source}, #{entity.views},
+            #{entity.likes}, #{entity.createdAt}, #{entity.visible}, #{entity.type})
+        </foreach>
+    </insert>
+
+    <insert id="insertOrUpdateBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into articles(title, content, category_id, source, views, likes, created_at, visible, type)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.title}, #{entity.content}, #{entity.categoryId}, #{entity.source}, #{entity.views},
+            #{entity.likes}, #{entity.createdAt}, #{entity.visible}, #{entity.type})
+        </foreach>
+        on duplicate key update
+        title = values(title),
+        content = values(content),
+        category_id = values(category_id),
+        source = values(source),
+        views = values(views),
+        likes = values(likes),
+        created_at = values(created_at),
+        visible = values(visible),
+        type = values(type)
+    </insert>
+
+    <!--通过主键修改数据-->
+    <update id="update">
+        update articles
+        <set>
+            <if test="title != null and title != ''">
+                title = #{title},
+            </if>
+            <if test="content != null and content != ''">
+                content = #{content},
+            </if>
+            <if test="categoryId != null">
+                category_id = #{categoryId},
+            </if>
+            <if test="source != null and source != ''">
+                source = #{source},
+            </if>
+            <if test="views != null">
+                views = #{views},
+            </if>
+            <if test="likes != null">
+                likes = #{likes},
+            </if>
+            <if test="createdAt != null">
+                created_at = #{createdAt},
+            </if>
+            <if test="visible != null">
+                visible = #{visible},
+            </if>
+            <if test="type != null and type != ''">
+                type = #{type},
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!--通过主键删除-->
+    <delete id="deleteById">
+        delete
+        from articles
+        where id = #{id}
+    </delete>
+
+
+<!--    queryAllArticles-->
+    <select id="queryAllArticles" resultMap="ArticlesMap">
+        select * from articles ORDER BY RAND()
+ </select>
+<!--    searchArticles-->
+    <select id="searchArticles" resultMap="ArticlesMap">
+        select * from articles
+        <where>
+            <if test="keyword != null and keyword != ''">
+                title like concat('%', #{keyword}, '%') or content like concat('%', #{keyword}, '%')
+         </if>
+    </where>
+    </select>
+
+<!--    Boolean setVisible(Integer id, Integer flag)-->
+    <update id="setVisible">
+        update articles
+        set visible = #{flag}
+        where id = #{id}
+    </update>
+
+<!--    queryVisible-->
+    <select id="queryVisible" resultMap="ArticlesMap">
+        select * from articles
+        where visible = 1
+    </select>
+</mapper>
+

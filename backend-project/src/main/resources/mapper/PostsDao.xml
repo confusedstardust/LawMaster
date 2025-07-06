@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lm.lawmaster.dao.PostsDao">
+
+    <resultMap type="com.lm.lawmaster.entity.Posts" id="PostsMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="userId" column="user_id" jdbcType="INTEGER"/>
+        <result property="title" column="title" jdbcType="VARCHAR"/>
+        <result property="content" column="content" jdbcType="VARCHAR"/>
+        <result property="images" column="images" jdbcType="VARCHAR"/>
+        <result property="tags" column="tags" jdbcType="VARCHAR"/>
+        <result property="views" column="views" jdbcType="INTEGER"/>
+        <result property="likes" column="likes" jdbcType="INTEGER"/>
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+        <result property="updatedAt" column="updated_at" jdbcType="TIMESTAMP"/>
+        <result property="collected" column="collected" jdbcType="INTEGER"/>
+        <result property="istop" column="istop" javaType="INTEGER"></result>
+    </resultMap>
+
+    <!--查询单个-->
+    <select id="queryById" resultMap="PostsMap">
+        select id,
+               user_id,
+               title,
+               content,
+               images,
+               tags,
+               views,
+               likes,
+               created_at,
+               updated_at,
+               collected,
+                istop
+        from posts
+        where id = #{id}
+    </select>
+
+    <select id="queryAll" resultMap="PostsMap">
+        select id,
+               user_id,
+               title,
+               content,
+               images,
+               tags,
+               views,
+               likes,
+               created_at,
+               updated_at,
+               collected,
+                istop
+        from posts
+        ORDER BY RAND()
+    </select>
+
+    <!--查询指定行数据-->
+    <select id="queryAllByLimit" resultMap="PostsMap">
+        select
+        id, user_id, title, content, images, tags, views, likes, created_at, updated_at, collected
+        from posts
+        <where>
+            <if test="id != null">
+                and id = #{id}
+            </if>
+            <if test="userId != null">
+                and user_id = #{userId}
+            </if>
+            <if test="title != null and title != ''">
+                and title = #{title}
+            </if>
+            <if test="content != null and content != ''">
+                and content = #{content}
+            </if>
+            <if test="images != null and images != ''">
+                and images = #{images}
+            </if>
+            <if test="tags != null and tags != ''">
+                and tags = #{tags}
+            </if>
+            <if test="views != null">
+                and views = #{views}
+            </if>
+            <if test="likes != null">
+                and likes = #{likes}
+            </if>
+            <if test="createdAt != null">
+                and created_at = #{createdAt}
+            </if>
+            <if test="updatedAt != null">
+                and updated_at = #{updatedAt}
+            </if>
+        </where>
+        1=1
+--         limit #{pageable.offset}, #{pageable.pageSize}
+    </select>
+
+    <!--统计总行数-->
+    <select id="count" resultType="java.lang.Long">
+        select count(1)
+        from posts
+        <where>
+            <if test="id != null">
+                and id = #{id}
+            </if>
+            <if test="userId != null">
+                and user_id = #{userId}
+            </if>
+            <if test="title != null and title != ''">
+                and title = #{title}
+            </if>
+            <if test="content != null and content != ''">
+                and content = #{content}
+            </if>
+            <if test="images != null and images != ''">
+                and images = #{images}
+            </if>
+            <if test="tags != null and tags != ''">
+                and tags = #{tags}
+            </if>
+            <if test="views != null">
+                and views = #{views}
+            </if>
+            <if test="likes != null">
+                and likes = #{likes}
+            </if>
+            <if test="createdAt != null">
+                and created_at = #{createdAt}
+            </if>
+            <if test="updatedAt != null">
+                and updated_at = #{updatedAt}
+            </if>
+        </where>
+    </select>
+
+    <!--新增所有列-->
+    <insert id="insert" keyProperty="id" useGeneratedKeys="true">
+        insert into posts(user_id, title, content, images, tags, views, likes, created_at, updated_at,istop,collected)
+        values (#{userId}, #{title}, #{content}, #{images},
+                <if test="tags != null and tags != ''">
+    #{tags}
+ </if>
+
+                , #{views}, #{likes}, #{createdAt}, #{updatedAt}, #{istop}, #{collected})
+    </insert>
+
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into posts(user_id, title, content, images, tags, views, likes, created_at, updated_at)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.userId}, #{entity.title}, #{entity.content}, #{entity.images}, #{entity.tags}, #{entity.views},
+            #{entity.likes}, #{entity.createdAt}, #{entity.updatedAt})
+        </foreach>
+    </insert>
+
+    <insert id="insertOrUpdateBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into posts(user_id, title, content, images, tags, views, likes, created_at, updated_at)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.userId}, #{entity.title}, #{entity.content}, #{entity.images}, #{entity.tags}, #{entity.views},
+            #{entity.likes}, #{entity.createdAt}, #{entity.updatedAt})
+        </foreach>
+        on duplicate key update
+        user_id = values(user_id),
+        title = values(title),
+        content = values(content),
+        images = values(images),
+        tags = values(tags),
+        views = values(views),
+        likes = values(likes),
+        created_at = values(created_at),
+        updated_at = values(updated_at)
+    </insert>
+
+    <!--通过主键修改数据-->
+    <update id="update">
+        update posts
+        <set>
+            <if test="userId != null">
+                user_id = #{userId},
+            </if>
+            <if test="title != null and title != ''">
+                title = #{title},
+            </if>
+            <if test="content != null and content != ''">
+                content = #{content},
+            </if>
+            <if test="images != null and images != ''">
+                images = #{images},
+            </if>
+            <if test="tags != null and tags != ''">
+                tags = #{tags},
+            </if>
+            <if test="views != null">
+                views = #{views},
+            </if>
+            <if test="likes != null">
+                likes = #{likes},
+            </if>
+            <if test="createdAt != null">
+                created_at = #{createdAt},
+            </if>
+            <if test="updatedAt != null">
+                updated_at = #{updatedAt},
+            </if>
+            <if test="istop != null">
+                istop = #{istop},
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!--通过主键删除-->
+    <delete id="deleteById">
+        delete
+        from posts
+        where id = #{id}
+    </delete>
+
+    <select id="queryByTag" resultMap="PostsMap">
+        SELECT id, user_id, title, content, images, tags, views, likes, created_at, updated_at, collected, istop
+        FROM posts
+        WHERE tags LIKE CONCAT('%', #{tag}, '%');
+    </select>
+
+
+    <select id="queryByPostIds" resultMap="PostsMap">
+        SELECT id, user_id, title, content, images, tags, views, likes, created_at, updated_at, collected, istop
+        FROM posts
+        WHERE id IN
+        <foreach collection="postIds" item="postId" open="(" separator="," close=")">
+            #{postId}
+        </foreach>
+    </select>
+
+    <select id="queryByUserId" resultMap="PostsMap">
+        SELECT id, user_id, title, content, images, tags, views, likes, created_at, updated_at, collected, istop
+        FROM posts
+        WHERE user_id = #{userId}
+    </select>
+
+<!--    queryByKeyword-->
+    <select id="queryByKeyword" resultMap="PostsMap">
+        SELECT id, user_id, title, content, images, tags, views, likes, created_at, updated_at, collected, istop
+        FROM posts
+        WHERE title LIKE CONCAT('%', #{keyword}, '%')
+        OR content LIKE CONCAT('%', #{keyword}, '%')
+    </select>
+
+    <select id="findWeeklyPostCount" resultType="map">
+        SELECT DATE(created_at) AS postDate, COUNT(*) AS postCount
+        FROM posts
+        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+        GROUP BY postDate
+        ORDER BY postDate
+    </select>
+<!--    getTopPosts-->
+    <select id="getTopPosts" resultMap="PostsMap">
+        SELECT id, user_id, title, content, images, tags, views, likes, created_at, updated_at, collected, istop
+        FROM posts
+        WHERE istop = 1
+    </select>
+
+</mapper>
+

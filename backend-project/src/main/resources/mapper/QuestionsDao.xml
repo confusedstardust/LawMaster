@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lm.lawmaster.dao.QuestionsDao">
+
+    <resultMap type="com.lm.lawmaster.entity.Questions" id="QuestionsMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="categoryId" column="category_id" jdbcType="INTEGER"/>
+        <result property="questionText" column="question_text" jdbcType="VARCHAR"/>
+        <result property="optionA" column="option_a" jdbcType="VARCHAR"/>
+        <result property="optionB" column="option_b" jdbcType="VARCHAR"/>
+        <result property="optionC" column="option_c" jdbcType="VARCHAR"/>
+        <result property="optionD" column="option_d" jdbcType="VARCHAR"/>
+        <result property="correctOption" column="correct_option" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!--查询单个-->
+    <select id="queryById" resultMap="QuestionsMap">
+        select id,
+               category_id,
+               question_text,
+               option_a,
+               option_b,
+               option_c,
+               option_d,
+               correct_option
+        from questions
+        where id = #{id}
+    </select>
+    <select id="queryByCategoryId" resultMap="QuestionsMap">
+        select id, category_id, question_text, option_a, option_b, option_c, option_d, correct_option
+        from questions
+        where category_id = #{categoryId}
+    </select>
+    <!--查询指定行数据-->
+    <select id="queryAllByLimit" resultMap="QuestionsMap">
+        select
+        id, category_id, question_text, option_a, option_b, option_c, option_d, correct_option
+        from questions
+        <where>
+            <if test="id != null">
+                and id = #{id}
+            </if>
+            <if test="categoryId != null">
+                and category_id = #{categoryId}
+            </if>
+            <if test="questionText != null and questionText != ''">
+                and question_text = #{questionText}
+            </if>
+            <if test="optionA != null and optionA != ''">
+                and option_a = #{optionA}
+            </if>
+            <if test="optionB != null and optionB != ''">
+                and option_b = #{optionB}
+            </if>
+            <if test="optionC != null and optionC != ''">
+                and option_c = #{optionC}
+            </if>
+            <if test="optionD != null and optionD != ''">
+                and option_d = #{optionD}
+            </if>
+            <if test="correctOption != null and correctOption != ''">
+                and correct_option = #{correctOption}
+            </if>
+        </where>
+        limit #{pageable.offset}, #{pageable.pageSize}
+    </select>
+
+    <!--统计总行数-->
+    <select id="count" resultType="java.lang.Long">
+        select count(1)
+        from questions
+        <where>
+            <if test="id != null">
+                and id = #{id}
+            </if>
+            <if test="categoryId != null">
+                and category_id = #{categoryId}
+            </if>
+            <if test="questionText != null and questionText != ''">
+                and question_text = #{questionText}
+            </if>
+            <if test="optionA != null and optionA != ''">
+                and option_a = #{optionA}
+            </if>
+            <if test="optionB != null and optionB != ''">
+                and option_b = #{optionB}
+            </if>
+            <if test="optionC != null and optionC != ''">
+                and option_c = #{optionC}
+            </if>
+            <if test="optionD != null and optionD != ''">
+                and option_d = #{optionD}
+            </if>
+            <if test="correctOption != null and correctOption != ''">
+                and correct_option = #{correctOption}
+            </if>
+        </where>
+    </select>
+
+    <!--新增所有列-->
+    <insert id="insert" keyProperty="id" useGeneratedKeys="true">
+        insert into questions(category_id, question_text, option_a, option_b, option_c, option_d, correct_option)
+        values (#{categoryId}, #{questionText}, #{optionA}, #{optionB}, #{optionC}, #{optionD}, #{correctOption})
+    </insert>
+
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into questions(category_id, question_text, option_a, option_b, option_c, option_d, correct_option)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.categoryId}, #{entity.questionText}, #{entity.optionA}, #{entity.optionB}, #{entity.optionC},
+            #{entity.optionD}, #{entity.correctOption})
+        </foreach>
+    </insert>
+
+    <insert id="insertOrUpdateBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into questions(category_id, question_text, option_a, option_b, option_c, option_d, correct_option)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.categoryId}, #{entity.questionText}, #{entity.optionA}, #{entity.optionB}, #{entity.optionC},
+            #{entity.optionD}, #{entity.correctOption})
+        </foreach>
+        on duplicate key update
+        category_id = values(category_id),
+        question_text = values(question_text),
+        option_a = values(option_a),
+        option_b = values(option_b),
+        option_c = values(option_c),
+        option_d = values(option_d),
+        correct_option = values(correct_option)
+    </insert>
+
+    <!--通过主键修改数据-->
+    <update id="update">
+        update questions
+        <set>
+            <if test="categoryId != null">
+                category_id = #{categoryId},
+            </if>
+            <if test="questionText != null and questionText != ''">
+                question_text = #{questionText},
+            </if>
+            <if test="optionA != null and optionA != ''">
+                option_a = #{optionA},
+            </if>
+            <if test="optionB != null and optionB != ''">
+                option_b = #{optionB},
+            </if>
+            <if test="optionC != null and optionC != ''">
+                option_c = #{optionC},
+            </if>
+            <if test="optionD != null and optionD != ''">
+                option_d = #{optionD},
+            </if>
+            <if test="correctOption != null and correctOption != ''">
+                correct_option = #{correctOption},
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!--通过主键删除-->
+    <delete id="deleteById">
+        delete
+        from questions
+        where id = #{id}
+    </delete>
+
+<!--    queryAll-->
+    <select id="queryAll" resultMap="QuestionsMap">
+        select * from questions ORDER BY RAND()
+    </select>
+
+<select id="queryByIdArray" resultMap="QuestionsMap">
+        select id, category_id, question_text, option_a, option_b, option_c, option_d, correct_option
+        from questions
+        where id in
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="searchQuestions" resultMap="QuestionsMap">
+        select * from questions
+        where question_text like concat('%', #{keyword}, '%')
+    </select>
+
+<!--    Map<String, Integer> countByCategory()-->
+    <select id="countByCategory" resultType="map">
+        SELECT category_id, COUNT(*) AS count
+        FROM questions
+        GROUP BY category_id
+    </select>
+
+</mapper>
+
